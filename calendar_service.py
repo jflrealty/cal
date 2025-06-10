@@ -1,6 +1,7 @@
 import requests
 from config import CLIENT_ID, CLIENT_SECRET, TENANT_ID
 from datetime import datetime, timedelta
+from dateutil import parser  # Novo: melhor suporte a ISO 8601
 
 def get_access_token():
     url = f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token"
@@ -21,7 +22,8 @@ def buscar_disponibilidades(vendedores_emails):
         'Prefer': 'outlook.timezone="E. South America Standard Time"'
     }
 
-    agora = datetime.now()
+    # Corrigindo fuso horário: UTC → Brasília
+    agora = datetime.utcnow() - timedelta(hours=3)
     inicio = agora.replace(hour=8, minute=0, second=0, microsecond=0)
     fim = agora.replace(hour=18, minute=0, second=0, microsecond=0)
 
@@ -39,15 +41,19 @@ def buscar_disponibilidades(vendedores_emails):
             res.raise_for_status()
             eventos = res.json().get("value", [])
 
-            if not eventos:
+            # Filtra eventos que ainda vão começar
+            eventos_futuros = [
+                e for e in eventos if parser.isoparse(e["start"]["dateTime"]) > agora
+            ]
+
+            if not eventos_futuros:
                 disponibilidade.append({
                     "email": email,
                     "disponivel": True,
                     "proximo_horario": 0
                 })
             else:
-                # calcula quantos minutos faltam para o primeiro evento
-                primeiro_inicio = datetime.fromisoformat(eventos[0]["start"]["dateTime"])
+                primeiro_inicio = parser.isoparse(eventos_futuros[0]["start"]["dateTime"])
                 delta_min = int((primeiro_inicio - agora).total_seconds() / 60)
 
                 disponibilidade.append({
@@ -55,6 +61,7 @@ def buscar_disponibilidades(vendedores_emails):
                     "disponivel": delta_min > 30,
                     "proximo_horario": delta_min
                 })
+
         except Exception as e:
             print(f"⚠️ Erro ao buscar agenda de {email}: {str(e)}")
             disponibilidade.append({
