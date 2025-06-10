@@ -15,7 +15,14 @@ class WebhookPayload(BaseModel):
 @app.post("/webhook")
 async def receber_agendamento(data: WebhookPayload):
     dados = data.payload or data.dict()
-    print("Agendamento recebido:", dados)
+
+    print("Payload recebido:", dados)
+
+    # Se quiser usar o email do cliente, por exemplo:
+    cliente_email = dados.get("attendee", {}).get("email", "desconhecido")
+    horario = dados.get("startTime", "sem horário")
+
+    print(f"Agendamento para {cliente_email} em {horario}")
 
     vendedores = await get_proximo_vendedor()
     disponibilidade = await buscar_disponibilidades(vendedores)
