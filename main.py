@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 from distribution import distribuir_agendamento
@@ -26,6 +26,7 @@ async def receber_agendamento(data: WebhookPayload):
         print("⚠️ Erro ao acessar dados do payload:", str(e))
 
     try:
+        vendedores = get_proximo_vendedor()  # ✅ Agora está definido
         disponibilidade = await buscar_disponibilidades(vendedores)
         responsavel = distribuir_agendamento(dados, vendedores, disponibilidade)
     except Exception as e:
