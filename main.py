@@ -14,6 +14,10 @@ class WebhookPayload(BaseModel):
 
 @app.post("/webhook")
 async def receber_agendamento(data: WebhookPayload):
+    if data.triggerEvent == "PING":
+        print("📡 Webhook de teste recebido (PING)")
+        return {"message": "Webhook de teste recebido com sucesso."}
+
     dados = data.payload or data.dict()
     print("🔔 Payload recebido:")
     print(dados)
