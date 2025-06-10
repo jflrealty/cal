@@ -8,17 +8,22 @@ from config import ADMIN_EMAIL
 
 app = FastAPI()
 
+
 class WebhookPayload(BaseModel):
-    event: Optional[str]
-    payload: Optional[Dict[str, Any]]
+    event: Optional[str] = None
+    triggerEvent: Optional[str] = None
+    payload: Optional[Dict[str, Any]] = None
+
 
 @app.post("/webhook")
 async def receber_agendamento(data: WebhookPayload):
+    # Se for um webhook de teste do Cal.com
     if data.triggerEvent == "PING":
         print("📡 Webhook de teste recebido (PING)")
-        return {"message": "Webhook de teste recebido com sucesso."}
+        return {"message": "Webhook de teste OK"}
 
-    dados = data.payload or data.dict()
+    dados = data.payload or {}
+
     print("🔔 Payload recebido:")
     print(dados)
 
@@ -30,7 +35,7 @@ async def receber_agendamento(data: WebhookPayload):
         print("⚠️ Erro ao acessar dados do payload:", str(e))
 
     try:
-        vendedores = get_proximo_vendedor()  # ✅ Agora está definido
+        vendedores = get_proximo_vendedor()
         disponibilidade = buscar_disponibilidades(vendedores)
         print("📊 Disponibilidade consultada no Outlook:")
         for d in disponibilidade:
