@@ -28,6 +28,9 @@ async def receber_agendamento(data: WebhookPayload):
     try:
         vendedores = get_proximo_vendedor()  # ✅ Agora está definido
         disponibilidade = buscar_disponibilidades(vendedores)
+        print("📊 Disponibilidade consultada no Outlook:")
+        for d in disponibilidade:
+            print(f"→ {d}")
         responsavel = distribuir_agendamento(dados, vendedores, disponibilidade)
     except Exception as e:
         print("💥 Erro na lógica de distribuição:", str(e))
