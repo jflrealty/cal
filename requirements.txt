@@ -4,3 +4,4 @@ requests
 aiohttp
 python-dotenv
 psycopg2-binary
+python-dateutil
