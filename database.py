@@ -1,8 +1,8 @@
 # Simula uma fila de round-robin entre vendedores
 fila = [
-    "joao@jflrealty.com.br",
-    "maria@jflrealty.com.br",
-    "pedro@jflrealty.com.br"
+    "gabriel.previati@jflliving.com.br",
+    "douglas.macedo@jflliving.com.br",
+    "marcos.rigol@jflliving.com.br"
 ]
 
 # Index atual da fila (rotaciona a cada chamada)
