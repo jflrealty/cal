@@ -26,7 +26,6 @@ async def receber_agendamento(data: WebhookPayload):
         print("⚠️ Erro ao acessar dados do payload:", str(e))
 
     try:
-        vendedores = await get_proximo_vendedor()
         disponibilidade = await buscar_disponibilidades(vendedores)
         responsavel = distribuir_agendamento(dados, vendedores, disponibilidade)
     except Exception as e:
