@@ -4,8 +4,14 @@ from dateutil import parser
 from config import (
     CLIENT_ID, CLIENT_SECRET, TENANT_ID,
     TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN,
-    TWILIO_MESSAGING_SERVICE_SID
+    TWILIO_MESSAGING_SERVICE_SID, TWILIO_WHATSAPP_NUMBER
 )
+
+print("🔎 Debug variáveis TWILIO:")
+print("→ SID:", TWILIO_ACCOUNT_SID)
+print("→ TOKEN:", TWILIO_AUTH_TOKEN)
+print("→ FROM:", TWILIO_WHATSAPP_NUMBER)
+print("→ MSG SID:", TWILIO_MESSAGING_SERVICE_SID)
 
 from twilio.rest import Client
 
