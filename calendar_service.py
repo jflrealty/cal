@@ -71,3 +71,46 @@ def buscar_disponibilidades(vendedores_emails):
             })
 
     return disponibilidade
+def criar_evento_outlook(responsavel_email, cliente_email, cliente_nome, inicio_iso, fim_iso, local, descricao):
+    access_token = get_access_token()
+    url = f"https://graph.microsoft.com/v1.0/users/{responsavel_email}/calendar/events"
+    
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+        'Content-Type': 'application/json'
+    }
+
+    body = {
+        "subject": f"Visita agendada - {local}",
+        "body": {
+            "contentType": "HTML",
+            "content": descricao or "Visita agendada via Cal.com"
+        },
+        "start": {
+            "dateTime": inicio_iso,
+            "timeZone": "America/Sao_Paulo"
+        },
+        "end": {
+            "dateTime": fim_iso,
+            "timeZone": "America/Sao_Paulo"
+        },
+        "location": {
+            "displayName": local
+        },
+        "attendees": [
+            {
+                "emailAddress": {
+                    "address": cliente_email,
+                    "name": cliente_nome
+                },
+                "type": "required"
+            }
+        ]
+    }
+
+    try:
+        res = requests.post(url, headers=headers, json=body)
+        res.raise_for_status()
+        print("📅 Evento criado com sucesso no calendário do responsável.")
+    except Exception as e:
+        print(f"❌ Erro ao criar evento no Outlook: {str(e)}")
