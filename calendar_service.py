@@ -1,3 +1,4 @@
+import logging
 import requests
 from datetime import datetime, timedelta
 from dateutil import parser
@@ -7,6 +8,9 @@ from config import (
     TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN,
     TWILIO_WHATSAPP_NUMBER, TWILIO_MESSAGING_SERVICE_SID
 )
+
+# Ativa logs detalhados
+logging.basicConfig(level=logging.DEBUG)
 
 # Debug inicial das variáveis do ambiente
 print("🔎 Debug variáveis TWILIO:")
@@ -22,7 +26,6 @@ VENDEDORES_WHATSAPP = {
     "marcos.rigol@jflliving.com.br": "+5511910854440",
     "victor.adas@jflrealty.com.br": "+5511993969755"
 }
-
 
 # Microsoft Graph API – Geração de token de acesso
 def get_access_token():
@@ -171,7 +174,7 @@ def enviar_email_notificacao(responsavel_email, cliente_nome, cliente_email, tel
         print("⚠️ Falha ao enviar notificação por e-mail:", str(e))
 
 
-# Envia WhatsApp via Twilio Messaging Service
+# Envia WhatsApp via Twilio
 def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inicio_iso, local):
     try:
         numero_destino = VENDEDORES_WHATSAPP.get(responsavel_email)
@@ -182,11 +185,8 @@ def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inici
         if not all([TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_MESSAGING_SERVICE_SID]):
             print("❗ Variáveis Twilio ausentes. Verifique seu .env ou config.py")
             return
-import logging
-logging.basicConfig(level=logging.DEBUG)
 
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-        to_number = numero_destino
 
         mensagem = f"""
 📢 *Novo Agendamento!*
@@ -201,7 +201,7 @@ logging.basicConfig(level=logging.DEBUG)
 
         message = client.messages.create(
             body=mensagem,
-            to=to_number,
+            to=f"whatsapp:{numero_destino}",
             messaging_service_sid=TWILIO_MESSAGING_SERVICE_SID
         )
 
