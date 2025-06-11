@@ -5,7 +5,7 @@ from twilio.rest import Client
 from config import (
     CLIENT_ID, CLIENT_SECRET, TENANT_ID,
     TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN,
-    TWILIO_WHATSAPP_NUMBER
+    TWILIO_WHATSAPP_NUMBER, TWILIO_MESSAGING_SERVICE_SID
 )
 
 # Debug inicial das variáveis do ambiente
@@ -13,14 +13,16 @@ print("🔎 Debug variáveis TWILIO:")
 print("→ SID:", TWILIO_ACCOUNT_SID)
 print("→ TOKEN:", TWILIO_AUTH_TOKEN)
 print("→ FROM:", TWILIO_WHATSAPP_NUMBER)
+print("→ MSG SID:", TWILIO_MESSAGING_SERVICE_SID)
 
-# Mapeia o e-mail do vendedor para número de WhatsApp (com 'whatsapp:' prefixado)
+# Mapeia o e-mail do vendedor para número de WhatsApp (sem o prefixo 'whatsapp:')
 VENDEDORES_WHATSAPP = {
-    "gabriel.previati@jflliving.com.br": "whatsapp:+5511937559739",
-    "douglas.macedo@jflliving.com.br": "whatsapp:+5511993435161",
-    "marcos.rigol@jflliving.com.br": "whatsapp:+5511910854440",
-    "victor.adas@jflrealty.com.br": "whatsapp:+5511993969755"
+    "gabriel.previati@jflliving.com.br": "+5511937559739",
+    "douglas.macedo@jflliving.com.br": "+5511993435161",
+    "marcos.rigol@jflliving.com.br": "+5511910854440",
+    "victor.adas@jflrealty.com.br": "+5511993969755"
 }
+
 
 # GRAPH API - Token para Outlook
 def get_access_token():
@@ -91,7 +93,7 @@ def buscar_disponibilidades(vendedores_emails):
     return disponibilidade
 
 
-# Outlook: Cria evento
+# Outlook: Cria evento no calendário do responsável
 def criar_evento_outlook(responsavel_email, cliente_email, cliente_nome, inicio_iso, fim_iso, local, descricao):
     access_token = get_access_token()
     url = f"https://graph.microsoft.com/v1.0/users/{responsavel_email}/calendar/events"
@@ -126,7 +128,7 @@ def criar_evento_outlook(responsavel_email, cliente_email, cliente_nome, inicio_
         print(f"❌ Erro ao criar evento no Outlook: {str(e)}")
 
 
-# Outlook: Envia e-mail ao responsável
+# Outlook: Envia e-mail para o responsável
 def enviar_email_notificacao(responsavel_email, cliente_nome, cliente_email, telefone, inicio_iso, fim_iso, local, descricao):
     access_token = get_access_token()
     url = f"https://graph.microsoft.com/v1.0/users/{responsavel_email}/sendMail"
@@ -169,7 +171,7 @@ def enviar_email_notificacao(responsavel_email, cliente_nome, cliente_email, tel
         print("⚠️ Falha ao enviar notificação por e-mail:", str(e))
 
 
-# Twilio: Envia WhatsApp para responsável
+# Twilio: Envia notificação por WhatsApp
 def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inicio_iso, local):
     try:
         numero_destino = VENDEDORES_WHATSAPP.get(responsavel_email)
@@ -182,9 +184,7 @@ def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inici
             return
 
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-
-        to_number = f"whatsapp:{numero_destino.lstrip('+')}"
-        print(f"🧪 Enviando WhatsApp para: {to_number}")
+        to_number = f"whatsapp:{numero_destino}"  # CORRETO: já prefixa uma única vez
 
         mensagem = f"""
 📢 *Novo Agendamento!*
@@ -199,8 +199,8 @@ def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inici
 
         message = client.messages.create(
             body=mensagem,
-            messaging_service_sid=TWILIO_MESSAGING_SERVICE_SID,
-            to=to_number
+            to=to_number,
+            messaging_service_sid=TWILIO_MESSAGING_SERVICE_SID
         )
 
         print("✅ WhatsApp enviado com sucesso:", message.sid)
