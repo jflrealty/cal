@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
-from calendar_service import buscar_disponibilidades, criar_evento_outlook
+from calendar_service import buscar_disponibilidades, criar_evento_outlook, enviar_email_notificacao
 from distribution import distribuir_agendamento
 from database import get_proximo_vendedor
 from config import ADMIN_EMAIL
@@ -26,7 +26,7 @@ async def receber_agendamento(data: WebhookPayload):
         return {"status": "ping ok"}
 
     try:
-        # Tenta capturar o e-mail e horário da visita
+        # Extrai dados principais do agendamento
         cliente = dados.get("attendees", [{}])[0]
         cliente_email = cliente.get("email", "sem_email")
         cliente_nome = cliente.get("name", "")
@@ -34,7 +34,6 @@ async def receber_agendamento(data: WebhookPayload):
         fim = dados.get("endTime", "sem_fim")
         local = dados.get("location", "Local não informado")
         descricao = dados.get("description", "")
-
         print(f"📅 Cliente: {cliente_email}, Horário: {inicio}")
     except Exception as e:
         print("⚠️ Erro ao acessar dados do payload:", str(e))
@@ -46,6 +45,7 @@ async def receber_agendamento(data: WebhookPayload):
         descricao = ""
 
     try:
+        # Lógica de distribuição e consulta
         vendedores = get_proximo_vendedor()
         disponibilidade = buscar_disponibilidades(vendedores)
         print("📊 Disponibilidade consultada no Outlook:")
@@ -54,29 +54,30 @@ async def receber_agendamento(data: WebhookPayload):
 
         responsavel = distribuir_agendamento(dados, vendedores, disponibilidade)
 
-    # Cria o evento na agenda do responsável
-    if responsavel:
-        criar_evento_outlook(
-            responsavel_email=responsavel,
-            cliente_email=cliente_email,
-            cliente_nome=cliente_nome,
-            inicio_iso=inicio,
-            fim_iso=fim,
-            local=local,
-            descricao=descricao
-        )
+        if responsavel:
+            # Criação do evento no Outlook
+            criar_evento_outlook(
+                responsavel_email=responsavel,
+                cliente_email=cliente_email,
+                cliente_nome=cliente_nome,
+                inicio_iso=inicio,
+                fim_iso=fim,
+                local=local,
+                descricao=descricao
+            )
 
-        telefone = dados.get("responses", {}).get("telefone", {}).get("value", "")
-        enviar_email_notificacao(
-            responsavel_email=responsavel,
-            cliente_nome=cliente_nome,
-            cliente_email=cliente_email,
-            telefone=telefone,
-            inicio_iso=inicio,
-            fim_iso=fim,
-            local=local,
-            descricao=descricao
-        )
+            # Notificação por e-mail
+            telefone = dados.get("responses", {}).get("telefone", {}).get("value", "")
+            enviar_email_notificacao(
+                responsavel_email=responsavel,
+                cliente_nome=cliente_nome,
+                cliente_email=cliente_email,
+                telefone=telefone,
+                inicio_iso=inicio,
+                fim_iso=fim,
+                local=local,
+                descricao=descricao
+            )
     except Exception as e:
         print("💥 Erro na lógica de distribuição:", str(e))
         responsavel = None
