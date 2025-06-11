@@ -182,6 +182,8 @@ def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inici
         if not all([TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_MESSAGING_SERVICE_SID]):
             print("❗ Variáveis Twilio ausentes. Verifique seu .env ou config.py")
             return
+import logging
+logging.basicConfig(level=logging.DEBUG)
 
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
         to_number = numero_destino
