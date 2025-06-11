@@ -9,17 +9,15 @@ from config import (
     TWILIO_WHATSAPP_NUMBER, TWILIO_MESSAGING_SERVICE_SID
 )
 
-# Ativa logs detalhados
 logging.basicConfig(level=logging.DEBUG)
 
-# Debug inicial das variáveis do ambiente
+# Debug inicial
 print("🔎 Debug variáveis TWILIO:")
 print("→ SID:", TWILIO_ACCOUNT_SID)
 print("→ TOKEN:", TWILIO_AUTH_TOKEN)
 print("→ FROM:", TWILIO_WHATSAPP_NUMBER)
 print("→ MSG SID:", TWILIO_MESSAGING_SERVICE_SID)
 
-# Mapeamento de vendedores
 VENDEDORES_WHATSAPP = {
     "gabriel.previati@jflliving.com.br": "+5511937559739",
     "douglas.macedo@jflliving.com.br": "+5511993435161",
@@ -27,7 +25,6 @@ VENDEDORES_WHATSAPP = {
     "victor.adas@jflrealty.com.br": "+5511993969755"
 }
 
-# Microsoft Graph API – Geração de token de acesso
 def get_access_token():
     url = f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token"
     data = {
@@ -41,7 +38,6 @@ def get_access_token():
     return response.json()['access_token']
 
 
-# Verifica disponibilidade dos vendedores no Outlook
 def buscar_disponibilidades(vendedores_emails):
     access_token = get_access_token()
     headers = {
@@ -96,11 +92,9 @@ def buscar_disponibilidades(vendedores_emails):
     return disponibilidade
 
 
-# Cria evento no calendário do vendedor
 def criar_evento_outlook(responsavel_email, cliente_email, cliente_nome, inicio_iso, fim_iso, local, descricao):
     access_token = get_access_token()
     url = f"https://graph.microsoft.com/v1.0/users/{responsavel_email}/calendar/events"
-
     headers = {
         'Authorization': f'Bearer {access_token}',
         'Content-Type': 'application/json'
@@ -126,16 +120,14 @@ def criar_evento_outlook(responsavel_email, cliente_email, cliente_nome, inicio_
     try:
         res = requests.post(url, headers=headers, json=body)
         res.raise_for_status()
-        print("📅 Evento criado com sucesso no calendário do responsável.")
+        print("📅 Evento criado com sucesso.")
     except Exception as e:
-        print(f"❌ Erro ao criar evento no Outlook: {str(e)}")
+        print(f"❌ Erro ao criar evento: {str(e)}")
 
 
-# Envia notificação por e-mail
 def enviar_email_notificacao(responsavel_email, cliente_nome, cliente_email, telefone, inicio_iso, fim_iso, local, descricao):
     access_token = get_access_token()
     url = f"https://graph.microsoft.com/v1.0/users/{responsavel_email}/sendMail"
-
     headers = {
         'Authorization': f'Bearer {access_token}',
         'Content-Type': 'application/json'
@@ -171,10 +163,9 @@ def enviar_email_notificacao(responsavel_email, cliente_nome, cliente_email, tel
         res.raise_for_status()
         print("📧 Notificação por e-mail enviada com sucesso.")
     except Exception as e:
-        print("⚠️ Falha ao enviar notificação por e-mail:", str(e))
+        print("⚠️ Falha ao enviar e-mail:", str(e))
 
 
-# Envia WhatsApp via Twilio
 def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inicio_iso, local):
     try:
         numero_destino = VENDEDORES_WHATSAPP.get(responsavel_email)
@@ -182,11 +173,12 @@ def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inici
             print(f"📵 WhatsApp não cadastrado para {responsavel_email}")
             return
 
-        if not all([TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_MESSAGING_SERVICE_SID]):
-            print("❗ Variáveis Twilio ausentes. Verifique seu .env ou config.py")
+        if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_MESSAGING_SERVICE_SID:
+            print("❗ TWILIO vars ausentes. Verifique config.py ou .env.")
             return
 
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        to_number = f"whatsapp:{numero_destino}"
 
         mensagem = f"""
 📢 *Novo Agendamento!*
@@ -196,16 +188,16 @@ def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inici
 📍 Local: *{local}*
 🗓 Horário: *{inicio_iso}*
 
-✅ Este agendamento foi confirmado via Cal.com
+✅ Agendamento confirmado via Cal.com
         """.strip()
 
         message = client.messages.create(
             body=mensagem,
-            to=f"whatsapp:{numero_destino}",
+            to=to_number,
             messaging_service_sid=TWILIO_MESSAGING_SERVICE_SID
         )
 
         print("✅ WhatsApp enviado com sucesso:", message.sid)
 
     except Exception as e:
-        print("💥 Erro ao enviar mensagem via WhatsApp:", str(e))
+        print("💥 Erro ao enviar WhatsApp:", str(e))
