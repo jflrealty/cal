@@ -11,10 +11,10 @@ from twilio.rest import Client
 
 # Mapeia o e-mail do vendedor para número de WhatsApp
 VENDEDORES_WHATSAPP = {
-    "gabriel.previati@jflliving.com.br": "whatsapp:+5511937559739",
-    "douglas.macedo@jflliving.com.br": "whatsapp:+5511993435161",
-    "marcos.rigol@jflliving.com.br": "whatsapp:+5511910854440",
-    "victor.adas@jflrealty.com.br": "whatsapp:+5511993969755"
+    "gabriel.previati@jflliving.com.br": "+5511937559739",
+    "douglas.macedo@jflliving.com.br": "+5511993435161",
+    "marcos.rigol@jflliving.com.br": "+5511910854440",
+    "victor.adas@jflrealty.com.br": "+5511993969755"
 }
 
 
