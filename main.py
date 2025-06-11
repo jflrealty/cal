@@ -1,32 +1,49 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
 from calendar_service import buscar_disponibilidades, criar_evento_outlook
+from distribution import distribuir_agendamento
 from database import get_proximo_vendedor
 from config import ADMIN_EMAIL
-from datetime import datetime, timedelta
 
 app = FastAPI()
 
 class WebhookPayload(BaseModel):
-    event: Optional[str]
+    event: Optional[str] = Field(default=None)
+    triggerEvent: Optional[str] = Field(default=None)
     payload: Optional[Dict[str, Any]]
 
 @app.post("/webhook")
 async def receber_agendamento(data: WebhookPayload):
-    dados = data.payload or data.dict()
+    dados = data.payload or {}
+
     print("🔔 Payload recebido:")
     print(dados)
 
+    # Webhook de teste enviado pelo Cal.com
+    if data.triggerEvent == "PING":
+        print("📣 Webhook de teste recebido (PING). Ignorando processamento.")
+        return {"status": "ping ok"}
+
     try:
+        # Tenta capturar o e-mail e horário da visita
         cliente = dados.get("attendees", [{}])[0]
         cliente_email = cliente.get("email", "sem_email")
-        cliente_nome = cliente.get("name", "Cliente")
+        cliente_nome = cliente.get("name", "")
         inicio = dados.get("startTime", "sem_data")
+        fim = dados.get("endTime", "sem_fim")
+        local = dados.get("location", "Local não informado")
+        descricao = dados.get("description", "")
+
         print(f"📅 Cliente: {cliente_email}, Horário: {inicio}")
     except Exception as e:
         print("⚠️ Erro ao acessar dados do payload:", str(e))
-        return {"assigned_to": ADMIN_EMAIL}
+        cliente_email = "sem_email"
+        cliente_nome = ""
+        inicio = "sem_data"
+        fim = "sem_fim"
+        local = "Erro ao ler local"
+        descricao = ""
 
     try:
         vendedores = get_proximo_vendedor()
@@ -35,24 +52,22 @@ async def receber_agendamento(data: WebhookPayload):
         for d in disponibilidade:
             print(f"→ {d}")
 
-        responsavel = vendedores[0] if disponibilidade[0]["disponivel"] else ADMIN_EMAIL
+        responsavel = distribuir_agendamento(dados, vendedores, disponibilidade)
 
-        if responsavel != ADMIN_EMAIL:
-            # Cria evento no Outlook
-            inicio_dt = datetime.fromisoformat(inicio)
-            fim_dt = inicio_dt + timedelta(minutes=60)
+        # Cria o evento na agenda do responsável
+        if responsavel:
             criar_evento_outlook(
                 responsavel_email=responsavel,
                 cliente_email=cliente_email,
                 cliente_nome=cliente_nome,
-                inicio_iso=inicio_dt.isoformat(),
-                fim_iso=fim_dt.isoformat(),
-                local=dados.get("location", "JFL Empreendimento"),
-                descricao=dados.get("description", "")
+                inicio_iso=inicio,
+                fim_iso=fim,
+                local=local,
+                descricao=descricao
             )
 
     except Exception as e:
         print("💥 Erro na lógica de distribuição:", str(e))
-        responsavel = ADMIN_EMAIL
+        responsavel = None
 
-    return {"assigned_to": responsavel}
+    return {"assigned_to": responsavel or ADMIN_EMAIL}
