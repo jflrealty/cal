@@ -15,7 +15,7 @@ print("→ TOKEN:", TWILIO_AUTH_TOKEN)
 print("→ FROM:", TWILIO_WHATSAPP_NUMBER)
 print("→ MSG SID:", TWILIO_MESSAGING_SERVICE_SID)
 
-# Mapeia o e-mail do vendedor para número de WhatsApp (sem o prefixo 'whatsapp:')
+# Mapeamento de vendedores
 VENDEDORES_WHATSAPP = {
     "gabriel.previati@jflliving.com.br": "+5511937559739",
     "douglas.macedo@jflliving.com.br": "+5511993435161",
@@ -24,7 +24,7 @@ VENDEDORES_WHATSAPP = {
 }
 
 
-# GRAPH API - Token para Outlook
+# Microsoft Graph API – Geração de token de acesso
 def get_access_token():
     url = f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token"
     data = {
@@ -38,7 +38,7 @@ def get_access_token():
     return response.json()['access_token']
 
 
-# Outlook: Verifica disponibilidade dos vendedores
+# Verifica disponibilidade dos vendedores no Outlook
 def buscar_disponibilidades(vendedores_emails):
     access_token = get_access_token()
     headers = {
@@ -93,7 +93,7 @@ def buscar_disponibilidades(vendedores_emails):
     return disponibilidade
 
 
-# Outlook: Cria evento no calendário do responsável
+# Cria evento no calendário do vendedor
 def criar_evento_outlook(responsavel_email, cliente_email, cliente_nome, inicio_iso, fim_iso, local, descricao):
     access_token = get_access_token()
     url = f"https://graph.microsoft.com/v1.0/users/{responsavel_email}/calendar/events"
@@ -128,7 +128,7 @@ def criar_evento_outlook(responsavel_email, cliente_email, cliente_nome, inicio_
         print(f"❌ Erro ao criar evento no Outlook: {str(e)}")
 
 
-# Outlook: Envia e-mail para o responsável
+# Envia notificação por e-mail
 def enviar_email_notificacao(responsavel_email, cliente_nome, cliente_email, telefone, inicio_iso, fim_iso, local, descricao):
     access_token = get_access_token()
     url = f"https://graph.microsoft.com/v1.0/users/{responsavel_email}/sendMail"
@@ -171,7 +171,7 @@ def enviar_email_notificacao(responsavel_email, cliente_nome, cliente_email, tel
         print("⚠️ Falha ao enviar notificação por e-mail:", str(e))
 
 
-# Twilio: Envia notificação por WhatsApp
+# Envia WhatsApp via Twilio Messaging Service
 def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inicio_iso, local):
     try:
         numero_destino = VENDEDORES_WHATSAPP.get(responsavel_email)
@@ -184,7 +184,7 @@ def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inici
             return
 
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-        to_number = f"whatsapp:{numero_destino}"  # CORRETO: já prefixa uma única vez
+        to_number = f"whatsapp:{numero_destino}"
 
         mensagem = f"""
 📢 *Novo Agendamento!*
