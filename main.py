@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
-from services import buscar_disponibilidades, criar_evento_outlook
+from calendar_service import buscar_disponibilidades, criar_evento_outlook
 from database import get_proximo_vendedor
 from config import ADMIN_EMAIL
 from datetime import datetime, timedelta
