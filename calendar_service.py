@@ -196,7 +196,7 @@ def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inici
 
         message = client.messages.create(
             body=mensagem,
-            from_=TWILIO_WHATSAPP_NUMBER,
+            from_="whatsapp:+19378703022",
             to=numero_destino
         )
 
