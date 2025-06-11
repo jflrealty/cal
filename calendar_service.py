@@ -177,11 +177,14 @@ def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inici
             print(f"📵 WhatsApp não cadastrado para {responsavel_email}")
             return
 
-        if not all([TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_NUMBER]):
+        if not all([TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_MESSAGING_SERVICE_SID]):
             print("❗ Variáveis Twilio ausentes. Verifique seu .env ou config.py")
             return
 
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+
+        to_number = f"whatsapp:{numero_destino.lstrip('+')}"
+        print(f"🧪 Enviando WhatsApp para: {to_number}")
 
         mensagem = f"""
 📢 *Novo Agendamento!*
@@ -196,8 +199,8 @@ def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inici
 
         message = client.messages.create(
             body=mensagem,
-            from_="whatsapp:+19378703022",
-            to=numero_destino
+            messaging_service_sid=TWILIO_MESSAGING_SERVICE_SID,
+            to=to_number
         )
 
         print("✅ WhatsApp enviado com sucesso:", message.sid)
