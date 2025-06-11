@@ -1,7 +1,22 @@
 import requests
-from config import CLIENT_ID, CLIENT_SECRET, TENANT_ID
 from datetime import datetime, timedelta
-from dateutil import parser  # Novo: melhor suporte a ISO 8601
+from dateutil import parser
+from config import (
+    CLIENT_ID, CLIENT_SECRET, TENANT_ID,
+    TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN,
+    TWILIO_MESSAGING_SERVICE_SID
+)
+
+from twilio.rest import Client
+
+# Mapeia o e-mail do vendedor para número de WhatsApp
+VENDEDORES_WHATSAPP = {
+    "gabriel.previati@jflliving.com.br": "whatsapp:+5511937559739",
+    "douglas.macedo@jflliving.com.br": "whatsapp:+5511993435161",
+    "marcos.rigol@jflliving.com.br": "whatsapp:+5511910854440",
+    "victor.adas@jflrealty.com.br": "whatsapp:+5511993969755"
+}
+
 
 def get_access_token():
     url = f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token"
@@ -15,6 +30,7 @@ def get_access_token():
     response.raise_for_status()
     return response.json()['access_token']
 
+
 def buscar_disponibilidades(vendedores_emails):
     access_token = get_access_token()
     headers = {
@@ -22,7 +38,6 @@ def buscar_disponibilidades(vendedores_emails):
         'Prefer': 'outlook.timezone="E. South America Standard Time"'
     }
 
-    # Corrigindo fuso horário: UTC → Brasília
     agora = datetime.utcnow() - timedelta(hours=3)
     inicio = agora.replace(hour=8, minute=0, second=0, microsecond=0)
     fim = agora.replace(hour=18, minute=0, second=0, microsecond=0)
@@ -41,7 +56,6 @@ def buscar_disponibilidades(vendedores_emails):
             res.raise_for_status()
             eventos = res.json().get("value", [])
 
-            # Filtra eventos que ainda vão começar
             eventos_futuros = [
                 e for e in eventos if parser.isoparse(e["start"]["dateTime"]) > agora
             ]
@@ -71,10 +85,12 @@ def buscar_disponibilidades(vendedores_emails):
             })
 
     return disponibilidade
+
+
 def criar_evento_outlook(responsavel_email, cliente_email, cliente_nome, inicio_iso, fim_iso, local, descricao):
     access_token = get_access_token()
     url = f"https://graph.microsoft.com/v1.0/users/{responsavel_email}/calendar/events"
-    
+
     headers = {
         'Authorization': f'Bearer {access_token}',
         'Content-Type': 'application/json'
@@ -115,10 +131,11 @@ def criar_evento_outlook(responsavel_email, cliente_email, cliente_nome, inicio_
     except Exception as e:
         print(f"❌ Erro ao criar evento no Outlook: {str(e)}")
 
+
 def enviar_email_notificacao(responsavel_email, cliente_nome, cliente_email, telefone, inicio_iso, fim_iso, local, descricao):
     access_token = get_access_token()
     url = f"https://graph.microsoft.com/v1.0/users/{responsavel_email}/sendMail"
-    
+
     headers = {
         'Authorization': f'Bearer {access_token}',
         'Content-Type': 'application/json'
@@ -160,30 +177,16 @@ def enviar_email_notificacao(responsavel_email, cliente_nome, cliente_email, tel
     except Exception as e:
         print("⚠️ Falha ao enviar notificação por e-mail:", str(e))
 
-from twilio.rest import Client
-from config import TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_NUMBER
-
-# Mapeamento do e-mail do vendedor para o número de WhatsApp
-VENDEDORES_WHATSAPP = {
-    "gabriel.previati@jflliving.com.br": "whatsapp:+5511937559739",
-    "douglas.macedo@jflliving.com.br": "whatsapp:+5511993435161",
-    "marcos.rigol@jflliving.com.br": "whatsapp:+5511910854440",
-    "victor.adas@jflrealty.com.br": "whatsapp:+5511993969755"
-}
 
 def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inicio_iso, local):
-    from twilio.rest import Client
-    from config import TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_NUMBER
-
     try:
         numero_destino = VENDEDORES_WHATSAPP.get(responsavel_email)
         if not numero_destino:
             print(f"📵 WhatsApp não cadastrado para {responsavel_email}")
             return
 
-        if not all([TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_NUMBER]):
+        if not all([TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_MESSAGING_SERVICE_SID]):
             print("❗ Credenciais Twilio incompletas. Verifique seu .env ou config.py")
-            print(f"SID: {TWILIO_ACCOUNT_SID}, Token: {'***' if TWILIO_AUTH_TOKEN else 'MISSING'}, From: {TWILIO_WHATSAPP_NUMBER}")
             return
 
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
@@ -201,8 +204,8 @@ def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inici
 
         message = client.messages.create(
             body=mensagem,
-            from_=TWILIO_WHATSAPP_NUMBER,
-            to=numero_destino
+            to=numero_destino,
+            messaging_service_sid=TWILIO_MESSAGING_SERVICE_SID
         )
 
         print("✅ WhatsApp enviado com sucesso:", message.sid)
