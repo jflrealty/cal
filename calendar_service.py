@@ -114,3 +114,48 @@ def criar_evento_outlook(responsavel_email, cliente_email, cliente_nome, inicio_
         print("📅 Evento criado com sucesso no calendário do responsável.")
     except Exception as e:
         print(f"❌ Erro ao criar evento no Outlook: {str(e)}")
+
+def enviar_email_notificacao(responsavel_email, cliente_nome, cliente_email, telefone, inicio_iso, fim_iso, local, descricao):
+    access_token = get_access_token()
+    url = f"https://graph.microsoft.com/v1.0/users/{responsavel_email}/sendMail"
+    
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+        'Content-Type': 'application/json'
+    }
+
+    corpo_email = f"""
+    <p>Olá, você tem um novo agendamento!</p>
+    <ul>
+      <li><strong>Cliente:</strong> {cliente_nome}</li>
+      <li><strong>Email:</strong> {cliente_email}</li>
+      <li><strong>Telefone:</strong> {telefone}</li>
+      <li><strong>Data/Hora:</strong> {inicio_iso} até {fim_iso}</li>
+      <li><strong>Local:</strong> {local}</li>
+      <li><strong>Descrição:</strong> {descricao}</li>
+    </ul>
+    """
+
+    email_data = {
+        "message": {
+            "subject": "Novo Agendamento Recebido",
+            "body": {
+                "contentType": "HTML",
+                "content": corpo_email
+            },
+            "toRecipients": [
+                {
+                    "emailAddress": {
+                        "address": responsavel_email
+                    }
+                }
+            ]
+        }
+    }
+
+    try:
+        res = requests.post(url, headers=headers, json=email_data)
+        res.raise_for_status()
+        print("📧 Notificação por e-mail enviada com sucesso.")
+    except Exception as e:
+        print("⚠️ Falha ao enviar notificação por e-mail:", str(e))
