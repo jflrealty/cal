@@ -1,29 +1,28 @@
 import requests
 from datetime import datetime, timedelta
 from dateutil import parser
+from twilio.rest import Client
 from config import (
     CLIENT_ID, CLIENT_SECRET, TENANT_ID,
     TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN,
-    TWILIO_MESSAGING_SERVICE_SID, TWILIO_WHATSAPP_NUMBER
+    TWILIO_WHATSAPP_NUMBER
 )
 
+# Debug inicial das variáveis do ambiente
 print("🔎 Debug variáveis TWILIO:")
 print("→ SID:", TWILIO_ACCOUNT_SID)
 print("→ TOKEN:", TWILIO_AUTH_TOKEN)
 print("→ FROM:", TWILIO_WHATSAPP_NUMBER)
-print("→ MSG SID:", TWILIO_MESSAGING_SERVICE_SID)
 
-from twilio.rest import Client
-
-# Mapeia o e-mail do vendedor para número de WhatsApp
+# Mapeia o e-mail do vendedor para número de WhatsApp (com 'whatsapp:' prefixado)
 VENDEDORES_WHATSAPP = {
-    "gabriel.previati@jflliving.com.br": "+5511937559739",
-    "douglas.macedo@jflliving.com.br": "+5511993435161",
-    "marcos.rigol@jflliving.com.br": "+5511910854440",
-    "victor.adas@jflrealty.com.br": "+5511993969755"
+    "gabriel.previati@jflliving.com.br": "whatsapp:+5511937559739",
+    "douglas.macedo@jflliving.com.br": "whatsapp:+5511993435161",
+    "marcos.rigol@jflliving.com.br": "whatsapp:+5511910854440",
+    "victor.adas@jflrealty.com.br": "whatsapp:+5511993969755"
 }
 
-
+# GRAPH API - Token para Outlook
 def get_access_token():
     url = f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token"
     data = {
@@ -37,6 +36,7 @@ def get_access_token():
     return response.json()['access_token']
 
 
+# Outlook: Verifica disponibilidade dos vendedores
 def buscar_disponibilidades(vendedores_emails):
     access_token = get_access_token()
     headers = {
@@ -61,7 +61,6 @@ def buscar_disponibilidades(vendedores_emails):
             res = requests.get(url, headers=headers, params=params)
             res.raise_for_status()
             eventos = res.json().get("value", [])
-
             eventos_futuros = [
                 e for e in eventos if parser.isoparse(e["start"]["dateTime"]) > agora
             ]
@@ -75,7 +74,6 @@ def buscar_disponibilidades(vendedores_emails):
             else:
                 primeiro_inicio = parser.isoparse(eventos_futuros[0]["start"]["dateTime"])
                 delta_min = int((primeiro_inicio - agora).total_seconds() / 60)
-
                 disponibilidade.append({
                     "email": email,
                     "disponivel": delta_min > 30,
@@ -93,6 +91,7 @@ def buscar_disponibilidades(vendedores_emails):
     return disponibilidade
 
 
+# Outlook: Cria evento
 def criar_evento_outlook(responsavel_email, cliente_email, cliente_nome, inicio_iso, fim_iso, local, descricao):
     access_token = get_access_token()
     url = f"https://graph.microsoft.com/v1.0/users/{responsavel_email}/calendar/events"
@@ -108,23 +107,12 @@ def criar_evento_outlook(responsavel_email, cliente_email, cliente_nome, inicio_
             "contentType": "HTML",
             "content": descricao or "Visita agendada via Cal.com"
         },
-        "start": {
-            "dateTime": inicio_iso,
-            "timeZone": "America/Sao_Paulo"
-        },
-        "end": {
-            "dateTime": fim_iso,
-            "timeZone": "America/Sao_Paulo"
-        },
-        "location": {
-            "displayName": local
-        },
+        "start": {"dateTime": inicio_iso, "timeZone": "America/Sao_Paulo"},
+        "end": {"dateTime": fim_iso, "timeZone": "America/Sao_Paulo"},
+        "location": {"displayName": local},
         "attendees": [
             {
-                "emailAddress": {
-                    "address": cliente_email,
-                    "name": cliente_nome
-                },
+                "emailAddress": {"address": cliente_email, "name": cliente_nome},
                 "type": "required"
             }
         ]
@@ -138,6 +126,7 @@ def criar_evento_outlook(responsavel_email, cliente_email, cliente_nome, inicio_
         print(f"❌ Erro ao criar evento no Outlook: {str(e)}")
 
 
+# Outlook: Envia e-mail ao responsável
 def enviar_email_notificacao(responsavel_email, cliente_nome, cliente_email, telefone, inicio_iso, fim_iso, local, descricao):
     access_token = get_access_token()
     url = f"https://graph.microsoft.com/v1.0/users/{responsavel_email}/sendMail"
@@ -167,11 +156,7 @@ def enviar_email_notificacao(responsavel_email, cliente_nome, cliente_email, tel
                 "content": corpo_email
             },
             "toRecipients": [
-                {
-                    "emailAddress": {
-                        "address": responsavel_email
-                    }
-                }
+                {"emailAddress": {"address": responsavel_email}}
             ]
         }
     }
@@ -184,6 +169,7 @@ def enviar_email_notificacao(responsavel_email, cliente_nome, cliente_email, tel
         print("⚠️ Falha ao enviar notificação por e-mail:", str(e))
 
 
+# Twilio: Envia WhatsApp para responsável
 def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inicio_iso, local):
     try:
         numero_destino = VENDEDORES_WHATSAPP.get(responsavel_email)
@@ -191,8 +177,8 @@ def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inici
             print(f"📵 WhatsApp não cadastrado para {responsavel_email}")
             return
 
-        if not all([TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_MESSAGING_SERVICE_SID]):
-            print("❗ Credenciais Twilio incompletas. Verifique seu .env ou config.py")
+        if not all([TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_NUMBER]):
+            print("❗ Variáveis Twilio ausentes. Verifique seu .env ou config.py")
             return
 
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
@@ -210,7 +196,7 @@ def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inici
 
         message = client.messages.create(
             body=mensagem,
-            from_="whatsapp:+19378703022",
+            from_=TWILIO_WHATSAPP_NUMBER,
             to=numero_destino
         )
 
