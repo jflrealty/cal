@@ -54,18 +54,29 @@ async def receber_agendamento(data: WebhookPayload):
 
         responsavel = distribuir_agendamento(dados, vendedores, disponibilidade)
 
-        # Cria o evento na agenda do responsável
-        if responsavel:
-            criar_evento_outlook(
-                responsavel_email=responsavel,
-                cliente_email=cliente_email,
-                cliente_nome=cliente_nome,
-                inicio_iso=inicio,
-                fim_iso=fim,
-                local=local,
-                descricao=descricao
-            )
+    # Cria o evento na agenda do responsável
+    if responsavel:
+        criar_evento_outlook(
+            responsavel_email=responsavel,
+            cliente_email=cliente_email,
+            cliente_nome=cliente_nome,
+            inicio_iso=inicio,
+            fim_iso=fim,
+            local=local,
+            descricao=descricao
+        )
 
+        telefone = dados.get("responses", {}).get("telefone", {}).get("value", "")
+        enviar_email_notificacao(
+            responsavel_email=responsavel,
+            cliente_nome=cliente_nome,
+            cliente_email=cliente_email,
+            telefone=telefone,
+            inicio_iso=inicio,
+            fim_iso=fim,
+            local=local,
+            descricao=descricao
+        )
     except Exception as e:
         print("💥 Erro na lógica de distribuição:", str(e))
         responsavel = None
