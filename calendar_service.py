@@ -172,10 +172,18 @@ VENDEDORES_WHATSAPP = {
 }
 
 def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inicio_iso, local):
+    from twilio.rest import Client
+    from config import TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_NUMBER
+
     try:
         numero_destino = VENDEDORES_WHATSAPP.get(responsavel_email)
         if not numero_destino:
             print(f"📵 WhatsApp não cadastrado para {responsavel_email}")
+            return
+
+        if not all([TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_NUMBER]):
+            print("❗ Credenciais Twilio incompletas. Verifique seu .env ou config.py")
+            print(f"SID: {TWILIO_ACCOUNT_SID}, Token: {'***' if TWILIO_AUTH_TOKEN else 'MISSING'}, From: {TWILIO_WHATSAPP_NUMBER}")
             return
 
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
@@ -196,6 +204,7 @@ def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inici
             from_=TWILIO_WHATSAPP_NUMBER,
             to=numero_destino
         )
+
         print("✅ WhatsApp enviado com sucesso:", message.sid)
 
     except Exception as e:
