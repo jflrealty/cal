@@ -210,8 +210,8 @@ def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inici
 
         message = client.messages.create(
             body=mensagem,
-            to=numero_destino,
-            messaging_service_sid=TWILIO_MESSAGING_SERVICE_SID
+            from_=TWILIO_WHATSAPP_NUMBER,
+            to=numero_destino
         )
 
         print("✅ WhatsApp enviado com sucesso:", message.sid)
