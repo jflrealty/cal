@@ -1,7 +1,14 @@
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
-from calendar_service import buscar_disponibilidades, criar_evento_outlook, enviar_email_notificacao
+
+from calendar_service import (
+    buscar_disponibilidades,
+    criar_evento_outlook,
+    enviar_email_notificacao,
+    enviar_whatsapp_notificacao,
+)
+
 from distribution import distribuir_agendamento
 from database import get_proximo_vendedor
 from config import ADMIN_EMAIL
@@ -78,15 +85,17 @@ async def receber_agendamento(data: WebhookPayload):
                 local=local,
                 descricao=descricao
             )
-            from calendar_service import enviar_whatsapp_notificacao
 
-            enviar_whatsapp_notificacao(
-                responsavel_email=responsavel,
-                cliente_nome=cliente_nome,
-                telefone=telefone,
-                inicio_iso=inicio,
-                local=local
-            )
+            # Notificação via WhatsApp (se telefone existir)
+            if telefone:
+                enviar_whatsapp_notificacao(
+                    responsavel_email=responsavel,
+                    cliente_nome=cliente_nome,
+                    telefone=telefone,
+                    inicio_iso=inicio,
+                    local=local
+                )
+
     except Exception as e:
         print("💥 Erro na lógica de distribuição:", str(e))
         responsavel = None
