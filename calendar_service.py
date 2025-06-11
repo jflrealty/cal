@@ -184,7 +184,7 @@ def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inici
             return
 
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-        to_number = f"whatsapp:{numero_destino}"
+        to_number = numero_destino
 
         mensagem = f"""
 📢 *Novo Agendamento!*
