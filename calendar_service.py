@@ -159,3 +159,44 @@ def enviar_email_notificacao(responsavel_email, cliente_nome, cliente_email, tel
         print("📧 Notificação por e-mail enviada com sucesso.")
     except Exception as e:
         print("⚠️ Falha ao enviar notificação por e-mail:", str(e))
+
+from twilio.rest import Client
+from config import TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_NUMBER
+
+# Mapeamento do e-mail do vendedor para o número de WhatsApp
+VENDEDORES_WHATSAPP = {
+    "gabriel.previati@jflliving.com.br": "whatsapp:+5511937559739",
+    "douglas.macedo@jflliving.com.br": "whatsapp:+5511993435161",
+    "marcos.rigol@jflliving.com.br": "whatsapp:+5511910854440",
+    "victor.adas@jflrealty.com.br": "whatsapp:+5511993969755"
+}
+
+def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inicio_iso, local):
+    try:
+        numero_destino = VENDEDORES_WHATSAPP.get(responsavel_email)
+        if not numero_destino:
+            print(f"📵 WhatsApp não cadastrado para {responsavel_email}")
+            return
+
+        client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+
+        mensagem = f"""
+📢 *Novo Agendamento!*
+
+👤 Cliente: *{cliente_nome}*
+📞 Telefone: *{telefone}*
+📍 Local: *{local}*
+🗓 Horário: *{inicio_iso}*
+
+✅ Este agendamento foi confirmado via Cal.com
+        """.strip()
+
+        message = client.messages.create(
+            body=mensagem,
+            from_=TWILIO_WHATSAPP_NUMBER,
+            to=numero_destino
+        )
+        print("✅ WhatsApp enviado com sucesso:", message.sid)
+
+    except Exception as e:
+        print("💥 Erro ao enviar mensagem via WhatsApp:", str(e))
