@@ -95,6 +95,19 @@ async def receber_agendamento(data: WebhookPayload):
                     inicio_iso=inicio,
                     local=local
                 )
+                    # Notificação para o Victor
+    from calendar_service import notificar_victor
+
+                notificar_victor(
+                    cliente_nome=cliente_nome,
+                    cliente_email=cliente_email,
+                    telefone=telefone,
+                    inicio_iso=inicio,
+                    fim_iso=fim,
+                    local=local,
+                    descricao=descricao,
+                    vendedor_email=responsavel
+                )
 
     except Exception as e:
         print("💥 Erro na lógica de distribuição:", str(e))
