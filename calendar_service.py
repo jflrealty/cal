@@ -199,6 +199,9 @@ def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inici
 
         print("✅ WhatsApp enviado com sucesso:", message.sid)
 
+    except Exception as e:
+        print(f"❌ Erro ao enviar WhatsApp para {responsavel_email}: {str(e)}")
+
 def notificar_victor(cliente_nome, cliente_email, telefone, inicio_iso, fim_iso, local, descricao, vendedor_email):
     VICTOR_EMAIL = "victor.adas@jflrealty.com.br"
     VICTOR_WHATSAPP = "whatsapp:+5511993969755"
