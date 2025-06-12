@@ -204,7 +204,6 @@ def notificar_victor(cliente_nome, cliente_email, telefone, inicio_iso, fim_iso,
     VICTOR_WHATSAPP = "whatsapp:+5511993969755"
 
     try:
-        # Envia e-mail
         access_token = get_access_token()
         url_email = f"https://graph.microsoft.com/v1.0/users/{VICTOR_EMAIL}/sendMail"
         headers = {
@@ -237,7 +236,7 @@ def notificar_victor(cliente_nome, cliente_email, telefone, inicio_iso, fim_iso,
         res.raise_for_status()
         print("📧 E-mail enviado ao Victor com sucesso.")
 
-        # Envia WhatsApp
+        # WhatsApp
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
         mensagem = f"""
 🚨 *Novo Agendamento Realizado*
@@ -257,7 +256,6 @@ def notificar_victor(cliente_nome, cliente_email, telefone, inicio_iso, fim_iso,
             messaging_service_sid=TWILIO_MESSAGING_SERVICE_SID
         )
         print("✅ WhatsApp enviado ao Victor com sucesso.")
-        return
 
     except Exception as e:
         print("❌ Erro ao notificar Victor:", str(e))
