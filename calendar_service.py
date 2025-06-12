@@ -236,7 +236,7 @@ def notificar_victor(cliente_nome, cliente_email, telefone, inicio_iso, fim_iso,
         res = requests.post(url_email, headers=headers, json=email_data)
         res.raise_for_status()
         print("📧 E-mail enviado ao Victor com sucesso.")
-    
+
         # Envia WhatsApp
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
         mensagem = f"""
