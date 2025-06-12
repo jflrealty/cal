@@ -7,6 +7,7 @@ from calendar_service import (
     criar_evento_outlook,
     enviar_email_notificacao,
     enviar_whatsapp_notificacao,
+    notificar_victor,  # ✅ IMPORT AQUI
 )
 
 from distribution import distribuir_agendamento
@@ -27,13 +28,11 @@ async def receber_agendamento(data: WebhookPayload):
     print("🔔 Payload recebido:")
     print(dados)
 
-    # Webhook de teste enviado pelo Cal.com
     if data.triggerEvent == "PING":
         print("📣 Webhook de teste recebido (PING). Ignorando processamento.")
         return {"status": "ping ok"}
 
     try:
-        # Extrai dados principais do agendamento
         cliente = dados.get("attendees", [{}])[0]
         cliente_email = cliente.get("email", "sem_email")
         cliente_nome = cliente.get("name", "")
@@ -52,7 +51,6 @@ async def receber_agendamento(data: WebhookPayload):
         descricao = ""
 
     try:
-        # Lógica de distribuição e consulta
         vendedores = get_proximo_vendedor()
         disponibilidade = buscar_disponibilidades(vendedores)
         print("📊 Disponibilidade consultada no Outlook:")
@@ -62,7 +60,6 @@ async def receber_agendamento(data: WebhookPayload):
         responsavel = distribuir_agendamento(dados, vendedores, disponibilidade)
 
         if responsavel:
-            # Criação do evento no Outlook
             criar_evento_outlook(
                 responsavel_email=responsavel,
                 cliente_email=cliente_email,
@@ -73,7 +70,6 @@ async def receber_agendamento(data: WebhookPayload):
                 descricao=descricao
             )
 
-            # Notificação por e-mail
             telefone = dados.get("responses", {}).get("telefone", {}).get("value", "")
             enviar_email_notificacao(
                 responsavel_email=responsavel,
@@ -86,7 +82,6 @@ async def receber_agendamento(data: WebhookPayload):
                 descricao=descricao
             )
 
-            # Notificação via WhatsApp (se telefone existir)
             if telefone:
                 enviar_whatsapp_notificacao(
                     responsavel_email=responsavel,
@@ -95,9 +90,8 @@ async def receber_agendamento(data: WebhookPayload):
                     inicio_iso=inicio,
                     local=local
                 )
-                    # Notificação para o Victor
-    from calendar_service import notificar_victor
 
+                # ✅ Notifica o Victor por e-mail e WhatsApp
                 notificar_victor(
                     cliente_nome=cliente_nome,
                     cliente_email=cliente_email,
