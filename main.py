@@ -9,7 +9,7 @@ from calendar_service import (
     criar_evento_outlook,
     enviar_email_notificacao,
     enviar_whatsapp_notificacao,
-    notificar_victor,  # ✅ IMPORT AQUI
+    notificar_victor,  # ✅
 )
 
 from distribution import distribuir_agendamento
