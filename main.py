@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
+import psycopg2
+from datetime import datetime
 
 from calendar_service import (
     buscar_disponibilidades,
@@ -20,6 +22,42 @@ class WebhookPayload(BaseModel):
     event: Optional[str] = Field(default=None)
     triggerEvent: Optional[str] = Field(default=None)
     payload: Optional[Dict[str, Any]]
+
+# Conexão com o banco Railway
+conn = psycopg2.connect(
+    host="mainline.proxy.rlwy.net",
+    port=15443,
+    dbname="railway",
+    user="postgres",
+    password="FgHGiyBQqSyFpjIcSRzDaArevEZTlWXE"
+)
+cursor = conn.cursor()
+
+def obter_ou_vincular_vendedor(email_cliente, candidatos_disponiveis):
+    cursor.execute(
+        "SELECT email_vendedor FROM clientes_atendidos WHERE email_cliente = %s",
+        (email_cliente,)
+    )
+    resultado = cursor.fetchone()
+
+    if resultado:
+        vendedor_email = resultado[0]
+        print(f"🔁 Cliente já vinculado: {email_cliente} → {vendedor_email}")
+        return vendedor_email
+
+    if not candidatos_disponiveis:
+        raise Exception("Nenhum vendedor disponível.")
+
+    vendedor_email = candidatos_disponiveis[0]["email"]
+    print(f"🆕 Novo vínculo: {email_cliente} → {vendedor_email}")
+
+    cursor.execute(
+        "INSERT INTO clientes_atendidos (email_cliente, email_vendedor, data_agendamento) VALUES (%s, %s, %s)",
+        (email_cliente, vendedor_email, datetime.now())
+    )
+    conn.commit()
+
+    return vendedor_email
 
 @app.post("/webhook")
 async def receber_agendamento(data: WebhookPayload):
@@ -57,7 +95,7 @@ async def receber_agendamento(data: WebhookPayload):
         for d in disponibilidade:
             print(f"→ {d}")
 
-        responsavel = distribuir_agendamento(dados, vendedores, disponibilidade)
+        responsavel = obter_ou_vincular_vendedor(cliente_email, disponibilidade)
 
         if responsavel:
             criar_evento_outlook(
