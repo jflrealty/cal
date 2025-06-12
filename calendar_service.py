@@ -203,43 +203,41 @@ def notificar_victor(cliente_nome, cliente_email, telefone, inicio_iso, fim_iso,
     VICTOR_EMAIL = "victor.adas@jflrealty.com.br"
     VICTOR_WHATSAPP = "whatsapp:+5511993969755"
 
-    # Envia e-mail
-    access_token = get_access_token()
-    url = f"https://graph.microsoft.com/v1.0/users/{VICTOR_EMAIL}/sendMail"
-    headers = {
-        'Authorization': f'Bearer {access_token}',
-        'Content-Type': 'application/json'
-    }
-
-    corpo_email = f"""
-    <p>🚨 <strong>Novo agendamento realizado</strong></p>
-    <ul>
-      <li><strong>Cliente:</strong> {cliente_nome}</li>
-      <li><strong>Email:</strong> {cliente_email}</li>
-      <li><strong>Telefone:</strong> {telefone}</li>
-      <li><strong>Horário:</strong> {inicio_iso} até {fim_iso}</li>
-      <li><strong>Local:</strong> {local}</li>
-      <li><strong>Descrição:</strong> {descricao}</li>
-      <li><strong>Vendedor direcionado:</strong> {vendedor_email}</li>
-    </ul>
-    """
-
-    email_data = {
-        "message": {
-            "subject": "Alerta: Novo Agendamento Recebido",
-            "body": {"contentType": "HTML", "content": corpo_email},
-            "toRecipients": [{"emailAddress": {"address": VICTOR_EMAIL}}]
+    try:
+        # Envia e-mail
+        access_token = get_access_token()
+        url_email = f"https://graph.microsoft.com/v1.0/users/{VICTOR_EMAIL}/sendMail"
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Content-Type': 'application/json'
         }
-    }
 
-    try:
-        requests.post(url, headers=headers, json=email_data).raise_for_status()
+        corpo_email = f"""
+        <p>🚨 <strong>Novo agendamento realizado</strong></p>
+        <ul>
+          <li><strong>Cliente:</strong> {cliente_nome}</li>
+          <li><strong>Email:</strong> {cliente_email}</li>
+          <li><strong>Telefone:</strong> {telefone}</li>
+          <li><strong>Horário:</strong> {inicio_iso} até {fim_iso}</li>
+          <li><strong>Local:</strong> {local}</li>
+          <li><strong>Descrição:</strong> {descricao}</li>
+          <li><strong>Vendedor direcionado:</strong> {vendedor_email}</li>
+        </ul>
+        """
+
+        email_data = {
+            "message": {
+                "subject": "Alerta: Novo Agendamento Recebido",
+                "body": {"contentType": "HTML", "content": corpo_email},
+                "toRecipients": [{"emailAddress": {"address": VICTOR_EMAIL}}]
+            }
+        }
+
+        res = requests.post(url_email, headers=headers, json=email_data)
+        res.raise_for_status()
         print("📧 E-mail enviado ao Victor com sucesso.")
-    except Exception as e:
-        print("⚠️ Falha ao enviar e-mail ao Victor:", str(e))
-
-    # Envia WhatsApp
-    try:
+    
+        # Envia WhatsApp
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
         mensagem = f"""
 🚨 *Novo Agendamento Realizado*
@@ -261,4 +259,4 @@ def notificar_victor(cliente_nome, cliente_email, telefone, inicio_iso, fim_iso,
         print("✅ WhatsApp enviado ao Victor com sucesso.")
 
     except Exception as e:
-        print("💥 Erro ao enviar WhatsApp para Victor:", str(e))
+        print("❌ Erro ao notificar Victor:", str(e))
