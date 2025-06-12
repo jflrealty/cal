@@ -257,6 +257,7 @@ def notificar_victor(cliente_nome, cliente_email, telefone, inicio_iso, fim_iso,
             messaging_service_sid=TWILIO_MESSAGING_SERVICE_SID
         )
         print("✅ WhatsApp enviado ao Victor com sucesso.")
+        return
 
     except Exception as e:
         print("❌ Erro ao notificar Victor:", str(e))
