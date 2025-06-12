@@ -204,12 +204,16 @@ def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inici
 
 def notificar_victor(cliente_nome, cliente_email, telefone, inicio_iso, fim_iso, local, descricao, vendedor_email):
     VICTOR_EMAIL = "victor.adas@jflrealty.com.br"
-    VICTOR_WHATSAPP = "whatsapp:+5511993969755"
+    numero_destino = VENDEDORES_WHATSAPP.get(VICTOR_EMAIL)
+
+    if not numero_destino:
+        print("❗ Número do Victor não encontrado.")
+        return
 
     try:
         # Envia e-mail
         access_token = get_access_token()
-        url_email = f"https://graph.microsoftonline.com/v1.0/users/{VICTOR_EMAIL}/sendMail"
+        url_email = f"https://graph.microsoft.com/v1.0/users/{VICTOR_EMAIL}/sendMail"
         headers = {
             'Authorization': f'Bearer {access_token}',
             'Content-Type': 'application/json'
@@ -254,9 +258,12 @@ def notificar_victor(cliente_nome, cliente_email, telefone, inicio_iso, fim_iso,
 🧑‍💼 *Vendedor:* {vendedor_email}
         """.strip()
 
+        print("📲 Enviando WhatsApp ao Victor:", numero_destino)
+        print("📨 Conteúdo:", mensagem)
+
         client.messages.create(
             body=mensagem,
-            to=VICTOR_WHATSAPP,
+            to=f"whatsapp:{numero_destino}",
             messaging_service_sid=TWILIO_MESSAGING_SERVICE_SID
         )
         print("✅ WhatsApp enviado ao Victor com sucesso.")
