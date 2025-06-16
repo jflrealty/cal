@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
 import psycopg2
 from datetime import datetime
+from ploomes_service import atualizar_owner_deal
 
 from calendar_service import (
     buscar_disponibilidades,
