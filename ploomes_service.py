@@ -3,7 +3,7 @@ import asyncio
 from urllib.parse import quote
 from config import PLOOMES_API_KEY
 
-# Atualiza ou cria lead no Ploomes com base no e-mail do cliente e do vendedor
+# Atualiza apenas o OwnerId do negócio (deal) baseado no e-mail do cliente e do vendedor
 async def atualizar_owner_deal(cliente_email: str, cliente_nome: str, vendedor_email: str, telefone: str = ""):
     headers = {
         "User-Key": PLOOMES_API_KEY,
@@ -12,9 +12,8 @@ async def atualizar_owner_deal(cliente_email: str, cliente_nome: str, vendedor_e
 
     try:
         # 1. Buscar ID do vendedor no Ploomes
-        filtro_usuario = quote(f"Email eq '{vendedor_email}'")  # encoding necessário
+        filtro_usuario = quote(f"Email eq '{vendedor_email}'")
         url_usuario = f"https://api2.ploomes.com/Users?$filter={filtro_usuario}"
-
         res_user = requests.get(url_usuario, headers=headers)
         print(f"🔍 GET /Users = {res_user.status_code}")
         print(res_user.text)
@@ -31,10 +30,9 @@ async def atualizar_owner_deal(cliente_email: str, cliente_nome: str, vendedor_e
         vendedor_id = user_data[0]["Id"]
         print(f"✅ Vendedor encontrado: ID = {vendedor_id}")
 
-        # 2. Buscar se o cliente já é um lead
+        # 2. Buscar ID do cliente
         filtro_cliente = quote(f"Email eq '{cliente_email}'")
         url_cliente = f"https://api2.ploomes.com/Contacts?$filter={filtro_cliente}"
-
         res_cliente = requests.get(url_cliente, headers=headers)
         print(f"🔍 GET /Contacts = {res_cliente.status_code}")
         print(res_cliente.text)
@@ -44,33 +42,39 @@ async def atualizar_owner_deal(cliente_email: str, cliente_nome: str, vendedor_e
             return
 
         cliente_data = res_cliente.json().get("value", [])
+        if not cliente_data:
+            print("⚠️ Contato não encontrado no Ploomes.")
+            return
 
-        if cliente_data:
-            # 3a. Atualizar OwnerId se já existir
-            cliente_id = cliente_data[0]["Id"]
-            print(f"✏️ Atualizando OwnerId do contato ID = {cliente_id}")
-            res_update = requests.patch(
-                f"https://api2.ploomes.com/Contacts({cliente_id})",
-                headers=headers,
-                json={"OwnerId": vendedor_id}
-            )
-            print(f"📌 PATCH /Contacts = {res_update.status_code}")
-        else:
-            # 3b. Criar novo lead
-            print("➕ Criando novo lead...")
-            payload = {
-                "Name": cliente_nome,
-                "Email": cliente_email,
-                "Phones": [{"PhoneNumber": telefone}] if telefone else [],
-                "OwnerId": vendedor_id
-            }
-            res_create = requests.post(
-                "https://api2.ploomes.com/Contacts",
-                headers=headers,
-                json=payload
-            )
-            print(f"✅ POST /Contacts = {res_create.status_code}")
-            print(res_create.text)
+        cliente_id = cliente_data[0]["Id"]
+
+        # 3. Buscar negócio em aberto do cliente
+        filtro_deal = quote(f"ContactId eq {cliente_id} and IsWon eq false and IsLost eq false")
+        url_deal = f"https://api2.ploomes.com/Deals?$filter={filtro_deal}&$orderby=CreationDate desc"
+        res_deal = requests.get(url_deal, headers=headers)
+        print(f"🔍 GET /Deals = {res_deal.status_code}")
+        print(res_deal.text)
+
+        if res_deal.status_code != 200:
+            print(f"❌ Erro ao buscar negócio: {res_deal.status_code} {res_deal.text}")
+            return
+
+        deals = res_deal.json().get("value", [])
+        if not deals:
+            print("⚠️ Nenhum negócio aberto encontrado para esse cliente.")
+            return
+
+        deal_id = deals[0]["Id"]
+
+        # 4. Atualizar OwnerId do negócio
+        payload = {"OwnerId": vendedor_id}
+        res_update = requests.patch(
+            f"https://api2.ploomes.com/Deals({deal_id})",
+            headers=headers,
+            json=payload
+        )
+        print(f"✏️ PATCH /Deals({deal_id}) = {res_update.status_code}")
+        print(res_update.text)
 
     except Exception as e:
         print(f"❗Erro inesperado: {e}")
