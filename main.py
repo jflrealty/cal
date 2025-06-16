@@ -3,19 +3,19 @@ from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
 import psycopg2
 from datetime import datetime
-from ploomes_service import atualizar_owner_deal
 
 from calendar_service import (
     buscar_disponibilidades,
     criar_evento_outlook,
     enviar_email_notificacao,
     enviar_whatsapp_notificacao,
-    notificar_victor,  # ✅
+    notificar_victor,
 )
 
 from distribution import distribuir_agendamento
 from database import get_proximo_vendedor
 from config import ADMIN_EMAIL
+from ploomes_service import atualizar_owner_deal  # ✅ NOVO IMPORT
 
 app = FastAPI()
 
@@ -65,9 +65,8 @@ async def receber_agendamento(data: WebhookPayload):
     dados = data.payload or {}
 
     # ========================
-    # 🟥 TRATAMENTO: CANCELAMENTO
+    # 🟥 CANCELAMENTO
     # ========================
-    # 👉 Verifica se é cancelamento
     if dados.get("status") == "CANCELLED":
         cancelador = dados.get("cancelledBy", "não informado")
         cliente = dados.get("attendees", [{}])[0]
@@ -75,7 +74,6 @@ async def receber_agendamento(data: WebhookPayload):
         local = dados.get("location", "Local não informado")
         inicio = dados.get("startTime", "sem_data")
 
-        # Busca vendedor previamente atribuído
         cursor.execute(
             "SELECT email_vendedor FROM clientes_atendidos WHERE email_cliente = %s",
             (cliente_email,)
@@ -86,11 +84,11 @@ async def receber_agendamento(data: WebhookPayload):
             vendedor = result[0]
             telefone = dados.get("responses", {}).get("telefone", {}).get("value", "")
 
-            # WhatsApp só para o vendedor (NÃO notifica o Victor)
             if telefone and vendedor:
                 try:
                     from twilio.rest import Client
                     from config import TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_MESSAGING_SERVICE_SID
+                    from calendar_service import VENDEDORES_WHATSAPP
 
                     client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
                     numero_destino = VENDEDORES_WHATSAPP.get(vendedor)
@@ -121,11 +119,10 @@ async def receber_agendamento(data: WebhookPayload):
             print(f"ℹ️ Cancelamento de cliente sem vendedor associado: {cliente_email}")
 
         return {"status": "cancelamento tratado"}
-   
+
     # ========================
-    # 🟩 TRATAMENTO: NOVO AGENDAMENTO
+    # 🟩 NOVO AGENDAMENTO
     # ========================
-    
     print("🔔 Payload recebido:")
     print(dados)
 
@@ -192,7 +189,6 @@ async def receber_agendamento(data: WebhookPayload):
                     local=local
                 )
 
-                # ✅ Notifica o Victor por e-mail e WhatsApp
                 notificar_victor(
                     cliente_nome=cliente_nome,
                     cliente_email=cliente_email,
@@ -201,6 +197,13 @@ async def receber_agendamento(data: WebhookPayload):
                     fim_iso=fim,
                     local=local,
                     descricao=descricao,
+                    vendedor_email=responsavel
+                )
+
+                # ✅ Atualizar negócio no Ploomes
+                await atualizar_owner_deal(
+                    cliente_email=cliente_email,
+                    cliente_nome=cliente_nome,
                     vendedor_email=responsavel
                 )
 
