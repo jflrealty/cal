@@ -101,7 +101,7 @@ def criar_evento_outlook(responsavel_email, cliente_email, cliente_nome, inicio_
     }
 
     body = {
-        "subject": f"Visita agendada - {local}",
+        "subject": f"{cliente_nome} - Visita agendada em {local}",
         "body": {
             "contentType": "HTML",
             "content": descricao or "Visita agendada via Cal.com"
