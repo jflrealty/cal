@@ -49,8 +49,7 @@ async def atualizar_owner_deal(cliente_email: str, cliente_nome: str, vendedor_e
         cliente_id = cliente_data[0]["Id"]
 
         # 3. Buscar negócio em aberto do cliente
-        url_deal = f"https://api2.ploomes.com/Deals?$filter=ContactId eq {cliente_id} and IsWon eq false and IsLost eq false&$orderby=CreateDate desc"
-        res_deal = requests.get(url_deal, headers=headers)
+        url_deal = f"https://api2.ploomes.com/Deals?$filter=ContactId eq {cliente_id} and StatusId eq 1&$orderby=CreateDate desc"
         print(f"🔍 GET /Deals = {res_deal.status_code}")
         print(res_deal.text)
 
