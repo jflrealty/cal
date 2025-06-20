@@ -1,5 +1,6 @@
 import requests
 import asyncio
+import time
 from urllib.parse import quote
 from config import PLOOMES_API_KEY
 
@@ -48,23 +49,32 @@ async def atualizar_owner_deal(cliente_email: str, cliente_nome: str, vendedor_e
 
         cliente_id = cliente_data[0]["Id"]
 
-        # 3. Buscar negócio em aberto do cliente (StatusId = 1)
-        filtro_deal = quote(f"ContactId eq {cliente_id} and StatusId eq 1")
-        url_deal = f"https://api2.ploomes.com/Deals?$filter={filtro_deal}&$orderby=CreateDate desc"
-        res_deal = requests.get(url_deal, headers=headers)
-        print(f"🔍 GET /Deals = {res_deal.status_code}")
-        print(res_deal.text)
+        # 3. Buscar negócio em aberto do cliente com até 3 tentativas
+        deal_id = None
+        for tentativa in range(3):
+            filtro_deal = quote(f"ContactId eq {cliente_id} and StatusId eq 1")
+            url_deal = f"https://api2.ploomes.com/Deals?$filter={filtro_deal}&$orderby=CreateDate desc"
+            res_deal = requests.get(url_deal, headers=headers)
 
-        if res_deal.status_code != 200:
-            print(f"❌ Erro ao buscar negócio: {res_deal.status_code} {res_deal.text}")
+            print(f"🔍 Tentativa {tentativa + 1} - GET /Deals = {res_deal.status_code}")
+            print(res_deal.text)
+
+            if res_deal.status_code != 200:
+                print(f"❌ Erro ao buscar negócio: {res_deal.status_code} {res_deal.text}")
+                return
+
+            deals = res_deal.json().get("value", [])
+            if deals:
+                deal_id = deals[0]["Id"]
+                print(f"✅ Negócio encontrado: ID = {deal_id}")
+                break
+            else:
+                print("⌛ Aguardando negócio aparecer...")
+                time.sleep(2)
+
+        if not deal_id:
+            print("⚠️ Nenhum negócio aberto encontrado após múltiplas tentativas.")
             return
-
-        deals = res_deal.json().get("value", [])
-        if not deals:
-            print("⚠️ Nenhum negócio aberto encontrado para esse cliente.")
-            return
-
-        deal_id = deals[0]["Id"]
 
         # 4. Atualizar OwnerId do negócio
         payload = {"OwnerId": vendedor_id}
