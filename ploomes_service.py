@@ -48,8 +48,10 @@ async def atualizar_owner_deal(cliente_email: str, cliente_nome: str, vendedor_e
 
         cliente_id = cliente_data[0]["Id"]
 
-        # 3. Buscar negócio em aberto do cliente
-        url_deal = f"https://api2.ploomes.com/Deals?$filter=ContactId eq {cliente_id} and StatusId eq 1&$orderby=CreateDate desc"
+        # 3. Buscar negócio em aberto do cliente (StatusId = 1)
+        filtro_deal = quote(f"ContactId eq {cliente_id} and StatusId eq 1")
+        url_deal = f"https://api2.ploomes.com/Deals?$filter={filtro_deal}&$orderby=CreateDate desc"
+        res_deal = requests.get(url_deal, headers=headers)
         print(f"🔍 GET /Deals = {res_deal.status_code}")
         print(res_deal.text)
 
@@ -75,4 +77,4 @@ async def atualizar_owner_deal(cliente_email: str, cliente_nome: str, vendedor_e
         print(res_update.text)
 
     except Exception as e:
-        print(f"❗Erro inesperado: {e}")
+        print(f"❗Erro inesperado: {repr(e)}")
