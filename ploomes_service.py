@@ -31,7 +31,7 @@ async def atualizar_owner_deal(cliente_email: str, cliente_nome: str, vendedor_e
         vendedor_id = user_data[0]["Id"]
         print(f"✅ Vendedor encontrado: ID = {vendedor_id}")
 
-        # 2. Buscar ID do cliente
+        # 2. Buscar TODOS os contatos com o mesmo e-mail do cliente
         filtro_cliente = quote(f"Email eq '{cliente_email}'")
         url_cliente = f"https://api2.ploomes.com/Contacts?$filter={filtro_cliente}"
         res_cliente = requests.get(url_cliente, headers=headers)
@@ -47,30 +47,33 @@ async def atualizar_owner_deal(cliente_email: str, cliente_nome: str, vendedor_e
             print("⚠️ Contato não encontrado no Ploomes.")
             return
 
-        cliente_id = cliente_data[0]["Id"]
-
-        # 3. Buscar negócio mais recente do cliente SEM responsável (OwnerId == null)
+        # 3. Buscar negócio mais recente sem responsável (OwnerId null) para QUALQUER um dos contatos encontrados
         deal_id = None
-        for tentativa in range(3):
-            filtro_deal = quote(f"ContactId eq {cliente_id} and OwnerId eq 0")
-            url_deal = f"https://api2.ploomes.com/Deals?$filter={filtro_deal}&$orderby=CreateDate desc"
-            res_deal = requests.get(url_deal, headers=headers)
+        for contato in cliente_data:
+            cliente_id = contato["Id"]
 
-            print(f"🔍 Tentativa {tentativa + 1} - GET /Deals = {res_deal.status_code}")
-            print(res_deal.text)
+            for tentativa in range(3):
+                filtro_deal = quote(f"ContactId eq {cliente_id} and OwnerId eq null")
+                url_deal = f"https://api2.ploomes.com/Deals?$filter={filtro_deal}&$orderby=CreateDate desc"
+                res_deal = requests.get(url_deal, headers=headers)
 
-            if res_deal.status_code != 200:
-                print(f"❌ Erro ao buscar negócio: {res_deal.status_code} {res_deal.text}")
-                return
+                print(f"🔍 Tentativa {tentativa + 1} - GET /Deals (ContactId: {cliente_id}) = {res_deal.status_code}")
+                print(res_deal.text)
 
-            deals = res_deal.json().get("value", [])
-            if deals:
-                deal_id = deals[0]["Id"]
-                print(f"✅ Negócio sem responsável encontrado: ID = {deal_id}")
+                if res_deal.status_code != 200:
+                    continue
+
+                deals = res_deal.json().get("value", [])
+                if deals:
+                    deal_id = deals[0]["Id"]
+                    print(f"✅ Negócio sem responsável encontrado: ID = {deal_id}")
+                    break
+                else:
+                    print("⌛ Aguardando negócio sem responsável aparecer...")
+                    time.sleep(2)
+
+            if deal_id:
                 break
-            else:
-                print("⌛ Aguardando negócio sem responsável aparecer...")
-                time.sleep(2)
 
         if not deal_id:
             print("⚠️ Nenhum negócio sem responsável encontrado para esse cliente.")
@@ -85,7 +88,8 @@ async def atualizar_owner_deal(cliente_email: str, cliente_nome: str, vendedor_e
         )
         print(f"✏️ PATCH /Deals({deal_id}) = {res_update.status_code}")
         print(res_update.text)
-        # 5. Verificar se o OwnerId foi realmente atualizado
+
+        # 5. Verificar se foi atualizado
         res_check = requests.get(
             f"https://api2.ploomes.com/Deals({deal_id})",
             headers=headers
