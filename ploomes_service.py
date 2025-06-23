@@ -85,6 +85,13 @@ async def atualizar_owner_deal(cliente_email: str, cliente_nome: str, vendedor_e
         )
         print(f"✏️ PATCH /Deals({deal_id}) = {res_update.status_code}")
         print(res_update.text)
+        # 5. Verificar se o OwnerId foi realmente atualizado
+        res_check = requests.get(
+            f"https://api2.ploomes.com/Deals({deal_id})",
+            headers=headers
+        )
+        print(f"🔍 Verificação após PATCH - GET /Deals({deal_id}) = {res_check.status_code}")
+        print(res_check.text)
 
     except Exception as e:
         print(f"❗Erro inesperado: {e}")
