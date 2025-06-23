@@ -49,10 +49,10 @@ async def atualizar_owner_deal(cliente_email: str, cliente_nome: str, vendedor_e
 
         cliente_id = cliente_data[0]["Id"]
 
-        # 3. Buscar negócio em aberto do cliente com até 3 tentativas
+        # 3. Buscar negócio mais recente do cliente SEM responsável (OwnerId == null)
         deal_id = None
         for tentativa in range(3):
-            filtro_deal = quote(f"ContactId eq {cliente_id} and StatusId eq 1")
+            filtro_deal = quote(f"ContactId eq {cliente_id} and OwnerId eq null")
             url_deal = f"https://api2.ploomes.com/Deals?$filter={filtro_deal}&$orderby=CreateDate desc"
             res_deal = requests.get(url_deal, headers=headers)
 
@@ -66,14 +66,14 @@ async def atualizar_owner_deal(cliente_email: str, cliente_nome: str, vendedor_e
             deals = res_deal.json().get("value", [])
             if deals:
                 deal_id = deals[0]["Id"]
-                print(f"✅ Negócio encontrado: ID = {deal_id}")
+                print(f"✅ Negócio sem responsável encontrado: ID = {deal_id}")
                 break
             else:
-                print("⌛ Aguardando negócio aparecer...")
+                print("⌛ Aguardando negócio sem responsável aparecer...")
                 time.sleep(2)
 
         if not deal_id:
-            print("⚠️ Nenhum negócio aberto encontrado após múltiplas tentativas.")
+            print("⚠️ Nenhum negócio sem responsável encontrado para esse cliente.")
             return
 
         # 4. Atualizar OwnerId do negócio
@@ -87,4 +87,4 @@ async def atualizar_owner_deal(cliente_email: str, cliente_nome: str, vendedor_e
         print(res_update.text)
 
     except Exception as e:
-        print(f"❗Erro inesperado: {repr(e)}")
+        print(f"❗Erro inesperado: {e}")
