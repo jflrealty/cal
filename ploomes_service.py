@@ -48,7 +48,6 @@ async def atualizar_owner_deal(cliente_email: str, cliente_nome: str, vendedor_e
             return
 
         # 3. Buscar negócio mais recente sem responsável (OwnerId null) para QUALQUER um dos contatos encontrados
-        deal_id = None
         for contato in cliente_data:
             cliente_id = contato["Id"]
 
@@ -61,41 +60,38 @@ async def atualizar_owner_deal(cliente_email: str, cliente_nome: str, vendedor_e
                 print(res_deal.text)
 
                 if res_deal.status_code != 200:
+                    time.sleep(1)
                     continue
 
                 deals = res_deal.json().get("value", [])
                 if deals:
                     deal_id = deals[0]["Id"]
                     print(f"✅ Negócio sem responsável encontrado: ID = {deal_id}")
-                    break
+
+                    # 4. Atualizar OwnerId do negócio
+                    payload = {"OwnerId": vendedor_id}
+                    res_update = requests.patch(
+                        f"https://api2.ploomes.com/Deals({deal_id})",
+                        headers=headers,
+                        json=payload
+                    )
+                    print(f"✏️ PATCH /Deals({deal_id}) = {res_update.status_code}")
+                    print(res_update.text)
+
+                    # 5. Verificar se foi atualizado
+                    res_check = requests.get(
+                        f"https://api2.ploomes.com/Deals({deal_id})",
+                        headers=headers
+                    )
+                    print(f"🔍 Verificação após PATCH - GET /Deals({deal_id}) = {res_check.status_code}")
+                    print(res_check.text)
+                    return  # encerra após o primeiro update bem-sucedido
+
                 else:
                     print("⌛ Aguardando negócio sem responsável aparecer...")
                     time.sleep(2)
 
-            if deal_id:
-                break
-
-        if not deal_id:
-            print("⚠️ Nenhum negócio sem responsável encontrado para esse cliente.")
-            return
-
-        # 4. Atualizar OwnerId do negócio
-        payload = {"OwnerId": vendedor_id}
-        res_update = requests.patch(
-            f"https://api2.ploomes.com/Deals({deal_id})",
-            headers=headers,
-            json=payload
-        )
-        print(f"✏️ PATCH /Deals({deal_id}) = {res_update.status_code}")
-        print(res_update.text)
-
-        # 5. Verificar se foi atualizado
-        res_check = requests.get(
-            f"https://api2.ploomes.com/Deals({deal_id})",
-            headers=headers
-        )
-        print(f"🔍 Verificação após PATCH - GET /Deals({deal_id}) = {res_check.status_code}")
-        print(res_check.text)
+        print("⚠️ Nenhum negócio sem responsável encontrado para esse cliente.")
 
     except Exception as e:
         print(f"❗Erro inesperado: {e}")
