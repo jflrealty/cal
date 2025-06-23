@@ -52,7 +52,7 @@ async def atualizar_owner_deal(cliente_email: str, cliente_nome: str, vendedor_e
         # 3. Buscar negócio mais recente do cliente SEM responsável (OwnerId == null)
         deal_id = None
         for tentativa in range(3):
-            filtro_deal = quote(f"ContactId eq {cliente_id} and OwnerId eq null")
+            filtro_deal = quote(f"ContactId eq {cliente_id} and OwnerId eq 0")
             url_deal = f"https://api2.ploomes.com/Deals?$filter={filtro_deal}&$orderby=CreateDate desc"
             res_deal = requests.get(url_deal, headers=headers)
 
