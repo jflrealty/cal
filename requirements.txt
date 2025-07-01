@@ -6,3 +6,4 @@ python-dotenv
 psycopg2-binary
 python-dateutil
 twilio
+pytz>=2024.1
