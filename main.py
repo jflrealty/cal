@@ -188,7 +188,7 @@ async def receber_agendamento(data: WebhookPayload):
                 cliente_email=cliente_email,
                 telefone=telefone,
                 inicio_iso=inicio_formatado,
-                fim_iso=fim_formatado
+                fim_iso=fim_formatado,
                 local=local,
                 descricao=descricao
             )
