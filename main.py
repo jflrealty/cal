@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
 import psycopg2
 from datetime import datetime
+import pytz
 
 from calendar_service import (
     buscar_disponibilidades,
@@ -18,6 +19,13 @@ from config import ADMIN_EMAIL
 from ploomes_service import atualizar_owner_deal  # ✅ NOVO IMPORT
 
 app = FastAPI()
+
+def converter_utc_para_sao_paulo(iso_string):
+    utc = pytz.utc
+    sp = pytz.timezone('America/Sao_Paulo')
+    dt_utc = datetime.fromisoformat(iso_string.replace("Z", "+00:00"))
+    dt_sp = dt_utc.astimezone(sp)
+    return dt_sp.strftime("%d/%m/%Y %H:%M")
 
 class WebhookPayload(BaseModel):
     event: Optional[str] = Field(default=None)
@@ -139,6 +147,11 @@ async def receber_agendamento(data: WebhookPayload):
         local = dados.get("location", "Local não informado")
         descricao = dados.get("description", "")
         print(f"📅 Cliente: {cliente_email}, Horário: {inicio}")
+   
+        # ✅ Conversão para horário de São Paulo
+        inicio_formatado = converter_utc_para_sao_paulo(inicio)
+        fim_formatado = converter_utc_para_sao_paulo(fim)
+   
     except Exception as e:
         print("⚠️ Erro ao acessar dados do payload:", str(e))
         cliente_email = "sem_email"
@@ -174,8 +187,8 @@ async def receber_agendamento(data: WebhookPayload):
                 cliente_nome=cliente_nome,
                 cliente_email=cliente_email,
                 telefone=telefone,
-                inicio_iso=inicio,
-                fim_iso=fim,
+                inicio_iso=inicio_formatado,
+                fim_iso=fim_formatado
                 local=local,
                 descricao=descricao
             )
@@ -185,7 +198,7 @@ async def receber_agendamento(data: WebhookPayload):
                     responsavel_email=responsavel,
                     cliente_nome=cliente_nome,
                     telefone=telefone,
-                    inicio_iso=inicio,
+                    inicio_iso=inicio_formatado,
                     local=local
                 )
 
@@ -193,8 +206,8 @@ async def receber_agendamento(data: WebhookPayload):
                     cliente_nome=cliente_nome,
                     cliente_email=cliente_email,
                     telefone=telefone,
-                    inicio_iso=inicio,
-                    fim_iso=fim,
+                    inicio_iso=inicio_formatado,
+                    fim_iso=fim_formatado,
                     local=local,
                     descricao=descricao,
                     vendedor_email=responsavel
