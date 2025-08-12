@@ -21,7 +21,7 @@ print("→ MSG SID:", TWILIO_MESSAGING_SERVICE_SID)
 VENDEDORES_WHATSAPP = {
     "gabriel.previati@jflliving.com.br": "+5511937559739",
     "douglas.macedo@jflliving.com.br": "+5511993435161",
-    #"marcos.rigol@jflliving.com.br": "+5511910854440",#
+    "marcos.rigol@jflliving.com.br": "+5511910854440",
     "victor.adas@jflrealty.com.br": "+5511993969755"
 }
 
