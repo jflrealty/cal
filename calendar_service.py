@@ -12,11 +12,11 @@ from config import (
 logging.basicConfig(level=logging.DEBUG)
 
 # Debug inicial
-print("🔎 Debug variáveis TWILIO:")
-print("→ SID:", TWILIO_ACCOUNT_SID)
-print("→ TOKEN:", TWILIO_AUTH_TOKEN)
-print("→ FROM:", TWILIO_WHATSAPP_NUMBER)
-print("→ MSG SID:", TWILIO_MESSAGING_SERVICE_SID)
+#print("🔎 Debug variáveis TWILIO:")
+#print("→ SID:", TWILIO_ACCOUNT_SID)
+#print("→ TOKEN:", TWILIO_AUTH_TOKEN)
+#print("→ FROM:", TWILIO_WHATSAPP_NUMBER)
+#print("→ MSG SID:", TWILIO_MESSAGING_SERVICE_SID)
 
 VENDEDORES_WHATSAPP = {
     "gabriel.previati@jflliving.com.br": "+5511937559739",
