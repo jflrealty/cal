@@ -10,32 +10,24 @@ from config import (
     TWILIO_WHATSAPP_NUMBER, TWILIO_MESSAGING_SERVICE_SID,
 )
 
-# --- Flag para ligar/desligar WhatsApp (lida do .env). Default: OFF ---
+# --- Flag para ligar/desligar WhatsApp via .env (default: OFF) ---
 try:
-    from config import SEND_WHATSAPP  # opcional, caso você já tenha colocado no config.py
+    from config import SEND_WHATSAPP  # caso você tenha colocado no config.py
 except Exception:
-    # Se não houver em config.py, lê direto do ambiente e faz fallback para False
     SEND_WHATSAPP = os.getenv("SEND_WHATSAPP", "false").lower() in ("1", "true", "yes", "on")
 
 logging.basicConfig(level=logging.DEBUG)
 
-# Debug inicial (deixe comentado se preferir)
-# print("🔎 Debug TWILIO:")
-# print("→ SID:", TWILIO_ACCOUNT_SID)
-# print("→ TOKEN:", TWILIO_AUTH_TOKEN)
-# print("→ FROM:", TWILIO_WHATSAPP_NUMBER)
-# print("→ MSG SID:", TWILIO_MESSAGING_SERVICE_SID)
-# print("→ SEND_WHATSAPP:", SEND_WHATSAPP)
-
-# Telefones dos vendedores (WhatsApp)
+# Mapa de WhatsApp dos vendedores
 VENDEDORES_WHATSAPP = {
     "gabriel.previati@jflliving.com.br": "+5511937559739",
     "douglas.macedo@jflliving.com.br": "+5511993435161",
-    # Para desativar temporariamente o Rigol no WhatsApp, deixe comentado ou remova:
-    "marcos.rigol@jflliving.com.br": "+5511910854440",
+    # Desative o Rigol comentando a linha abaixo enquanto precisar:
+    # "marcos.rigol@jflliving.com.br": "+5511910854440",
     "victor.adas@jflrealty.com.br": "+5511993969755",
 }
 
+# ---------- AUTH GRAPH ----------
 def get_access_token():
     url = f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token"
     data = {
@@ -48,16 +40,16 @@ def get_access_token():
     response.raise_for_status()
     return response.json()["access_token"]
 
-
+# ---------- DISPONIBILIDADE ----------
 def buscar_disponibilidades(vendedores_emails):
     access_token = get_access_token()
     headers = {
         "Authorization": f"Bearer {access_token}",
-        # Fuso do Outlook para leitura dos eventos do dia
+        # força fuso do Outlook ao ler eventos
         'Prefer': 'outlook.timezone="E. South America Standard Time"',
     }
 
-    # Janela do dia em São Paulo
+    # Janela do dia local em SP (aproximação usando UTC-3)
     agora = datetime.utcnow() - timedelta(hours=3)
     inicio = agora.replace(hour=8, minute=0, second=0, microsecond=0)
     fim = agora.replace(hour=18, minute=0, second=0, microsecond=0)
@@ -75,58 +67,40 @@ def buscar_disponibilidades(vendedores_emails):
             res = requests.get(url, headers=headers, params=params)
             res.raise_for_status()
             eventos = res.json().get("value", [])
-            eventos_futuros = [
-                e for e in eventos if parser.isoparse(e["start"]["dateTime"]) > agora
-            ]
+            eventos_futuros = [e for e in eventos if parser.isoparse(e["start"]["dateTime"]) > agora]
 
             if not eventos_futuros:
-                disponibilidade.append(
-                    {"email": email, "disponivel": True, "proximo_horario": 0}
-                )
+                disponibilidade.append({"email": email, "disponivel": True, "proximo_horario": 0})
             else:
-                primeiro_inicio = parser.isoparse(
-                    eventos_futuros[0]["start"]["dateTime"]
-                )
+                primeiro_inicio = parser.isoparse(eventos_futuros[0]["start"]["dateTime"])
                 delta_min = int((primeiro_inicio - agora).total_seconds() / 60)
-                disponibilidade.append(
-                    {
-                        "email": email,
-                        "disponivel": delta_min > 30,
-                        "proximo_horario": delta_min,
-                    }
-                )
+                disponibilidade.append({
+                    "email": email,
+                    "disponivel": delta_min > 30,
+                    "proximo_horario": delta_min,
+                })
 
         except Exception as e:
             print(f"⚠️ Erro ao buscar agenda de {email}: {str(e)}")
-            disponibilidade.append(
-                {"email": email, "disponivel": False, "proximo_horario": 9999}
-            )
+            disponibilidade.append({"email": email, "disponivel": False, "proximo_horario": 9999})
 
     return disponibilidade
 
-
-def criar_evento_outlook(
-    responsavel_email, cliente_email, cliente_nome, inicio_iso, fim_iso, local, descricao
-):
+# ---------- CRIAR EVENTO ----------
+def criar_evento_outlook(responsavel_email, cliente_email, cliente_nome, inicio_iso, fim_iso, local, descricao):
     access_token = get_access_token()
     url = f"https://graph.microsoft.com/v1.0/users/{responsavel_email}/calendar/events"
     headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
 
     body = {
         "subject": f"{cliente_nome} - Visita agendada em {local}",
-        "body": {
-            "contentType": "HTML",
-            "content": descricao or "Visita agendada via Cal.com",
-        },
-        # Aqui usamos o fuso explícito do calendário (consistente com o e-mail)
+        "body": {"contentType": "HTML", "content": descricao or "Visita agendada via Cal.com"},
+        # Mantém consistência: passamos o ISO de entrada e o fuso do calendário explicitamente
         "start": {"dateTime": inicio_iso, "timeZone": "America/Sao_Paulo"},
         "end": {"dateTime": fim_iso, "timeZone": "America/Sao_Paulo"},
         "location": {"displayName": local},
         "attendees": [
-            {
-                "emailAddress": {"address": cliente_email, "name": cliente_nome},
-                "type": "required",
-            }
+            {"emailAddress": {"address": cliente_email, "name": cliente_nome}, "type": "required"}
         ],
     }
 
@@ -137,10 +111,8 @@ def criar_evento_outlook(
     except Exception as e:
         print(f"❌ Erro ao criar evento: {str(e)}")
 
-
-def enviar_email_notificacao(
-    responsavel_email, cliente_nome, cliente_email, telefone, inicio_iso, fim_iso, local, descricao
-):
+# ---------- EMAIL VENDEDOR ----------
+def enviar_email_notificacao(responsavel_email, cliente_nome, cliente_email, telefone, inicio_iso, fim_iso, local, descricao):
     access_token = get_access_token()
     url = f"https://graph.microsoft.com/v1.0/users/{responsavel_email}/sendMail"
     headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
@@ -172,7 +144,7 @@ def enviar_email_notificacao(
     except Exception as e:
         print("⚠️ Falha ao enviar e-mail:", str(e))
 
-
+# ---------- WHATSAPP VENDEDOR ----------
 def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inicio_iso, local):
     if not SEND_WHATSAPP:
         print("🔕 WhatsApp desativado por configuração (SEND_WHATSAPP=false).")
@@ -189,7 +161,6 @@ def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inici
             return
 
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-
         mensagem = f"""
 📢 *Novo Agendamento!*
 
@@ -211,15 +182,13 @@ def enviar_whatsapp_notificacao(responsavel_email, cliente_nome, telefone, inici
     except Exception as e:
         print(f"❌ Erro ao enviar WhatsApp para {responsavel_email}: {str(e)}")
 
-
-def notificar_victor(
-    cliente_nome, cliente_email, telefone, inicio_iso, fim_iso, local, descricao, vendedor_email
-):
+# ---------- NOTIFICAR VICTOR ----------
+def notificar_victor(cliente_nome, cliente_email, telefone, inicio_iso, fim_iso, local, descricao, vendedor_email):
     VICTOR_EMAIL = "victor.adas@jflrealty.com.br"
     numero_destino = VENDEDORES_WHATSAPP.get(VICTOR_EMAIL)
 
     try:
-        # ----- E-MAIL (mantido) -----
+        # E-mail para o Victor (sempre ativo)
         access_token = get_access_token()
         url_email = f"https://graph.microsoft.com/v1.0/users/{VICTOR_EMAIL}/sendMail"
         headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
@@ -249,14 +218,14 @@ def notificar_victor(
         res.raise_for_status()
         print("📧 E-mail enviado ao Victor com sucesso.")
 
-        # ----- WhatsApp do Victor (segue flag global) -----
+        # WhatsApp do Victor condicionado à flag
         if SEND_WHATSAPP:
             if not (TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN and TWILIO_MESSAGING_SERVICE_SID):
                 print("❗ Variáveis TWILIO ausentes. WhatsApp do Victor pulado.")
                 return
 
             if not numero_destino:
-                print("❗ Número do Victor não encontrado no mapa VENDEDORES_WHATSAPP.")
+                print("❗ Número do Victor não encontrado em VENDEDORES_WHATSAPP.")
                 return
 
             client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
