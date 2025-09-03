@@ -245,28 +245,28 @@ def notificar_victor(cliente_nome, cliente_email, telefone, inicio_iso, fim_iso,
         print("📧 E-mail enviado ao Victor com sucesso.")
 
         # Envia WhatsApp
-        client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-        mensagem = f"""
-🚨 *Novo Agendamento Realizado*
+        #client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        #mensagem = f"""
+#🚨 *Novo Agendamento Realizado*
 
-👤 *Cliente:* {cliente_nome}
-📧 *Email:* {cliente_email}
-📞 *Telefone:* {telefone}
-📍 *Local:* {local}
-🗓 *Horário:* {inicio_iso} até {fim_iso}
-📋 *Descrição:* {descricao}
-🧑‍💼 *Vendedor:* {vendedor_email}
-        """.strip()
+#👤 *Cliente:* {cliente_nome}
+#📧 *Email:* {cliente_email}
+#📞 *Telefone:* {telefone}
+#📍 *Local:* {local}
+#🗓 *Horário:* {inicio_iso} até {fim_iso}
+#📋 *Descrição:* {descricao}
+#🧑‍💼 *Vendedor:* {vendedor_email}
+        #""".strip()
 
-        print("📲 Enviando WhatsApp ao Victor:", numero_destino)
-        print("📨 Conteúdo:", mensagem)
+        #print("📲 Enviando WhatsApp ao Victor:", numero_destino)
+        #print("📨 Conteúdo:", mensagem)
 
-        client.messages.create(
-            body=mensagem,
-            to=f"whatsapp:{numero_destino}",
-            messaging_service_sid=TWILIO_MESSAGING_SERVICE_SID
-        )
-        print("✅ WhatsApp enviado ao Victor com sucesso.")
+        #client.messages.create(
+            #body=mensagem,
+            #to=f"whatsapp:{numero_destino}",
+            #messaging_service_sid=TWILIO_MESSAGING_SERVICE_SID
+        #)
+        #print("✅ WhatsApp enviado ao Victor com sucesso.")
 
     except Exception as e:
         print("❌ Erro ao notificar Victor:", str(e))
