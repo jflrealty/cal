@@ -1,14 +1,14 @@
 def distribuir_agendamento(agendamento, vendedores, disponibilidade):
-    # 1. Se alguém tem slot em < 30min
+    # 1) Alguém com slot < 30 min?
     for v in disponibilidade:
         if v["proximo_horario"] <= 30:
             return v["email"]
 
-    # 2. Se todos indisponíveis
+    # 2) Todos indisponíveis → manda pro Victor
     if not any(v["disponivel"] for v in disponibilidade):
-        return "victor@jflrealty.com.br"
+        return "victor.adas@jflrealty.com.br"
 
-    # 3. Round-robin (persistido em banco)
+    # 3) Round-robin filtrando quem está disponível
     for v in disponibilidade:
         if v["disponivel"]:
             return v["email"]
