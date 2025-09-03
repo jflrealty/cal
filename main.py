@@ -98,27 +98,27 @@ async def receber_agendamento(data: WebhookPayload):
                     from config import TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_MESSAGING_SERVICE_SID
                     from calendar_service import VENDEDORES_WHATSAPP
 
-                    client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-                    numero_destino = VENDEDORES_WHATSAPP.get(vendedor)
+                    #client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+                    #numero_destino = VENDEDORES_WHATSAPP.get(vendedor)
 
-                    if numero_destino:
-                        mensagem = f"""
-📣 *Agendamento Cancelado*
+                    #if numero_destino:
+                        #mensagem = f"""
+#📣 *Agendamento Cancelado*
 
-👤 Cliente: *{cliente_email}*
-📍 Local: *{local}*
-🗓 Data/hora: *{inicio}*
+#👤 Cliente: *{cliente_email}*
+#📍 Local: *{local}*
+#🗓 Data/hora: *{inicio}*
 
-❌ Cancelado por: {cancelador}
-                        """.strip()
+#❌ Cancelado por: {cancelador}
+                        #""".strip()
 
-                        client.messages.create(
-                            body=mensagem,
-                            to=f"whatsapp:{numero_destino}",
-                            messaging_service_sid=TWILIO_MESSAGING_SERVICE_SID
-                        )
-                        print(f"📲 WhatsApp de cancelamento enviado para {vendedor} ({numero_destino})")
-                    else:
+                        #client.messages.create(
+                            #body=mensagem,
+                            #to=f"whatsapp:{numero_destino}",
+                            #messaging_service_sid=TWILIO_MESSAGING_SERVICE_SID
+                        #)
+                        #print(f"📲 WhatsApp de cancelamento enviado para {vendedor} ({numero_destino})")
+                    else
                         print(f"❗ Vendedor {vendedor} não tem número cadastrado.")
 
                 except Exception as e:
@@ -193,14 +193,14 @@ async def receber_agendamento(data: WebhookPayload):
                 descricao=descricao
             )
 
-            if telefone:
-                enviar_whatsapp_notificacao(
-                    responsavel_email=responsavel,
-                    cliente_nome=cliente_nome,
-                    telefone=telefone,
-                    inicio_iso=inicio_formatado,
-                    local=local
-                )
+            #if telefone:
+                #enviar_whatsapp_notificacao(
+                    #responsavel_email=responsavel,
+                    #cliente_nome=cliente_nome,
+                    #telefone=telefone,
+                    #inicio_iso=inicio_formatado,
+                    #local=local
+                #)
 
                 notificar_victor(
                     cliente_nome=cliente_nome,
